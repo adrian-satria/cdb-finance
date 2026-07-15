@@ -24,8 +24,8 @@
 <div class="project-multiselect-wrapper" data-initialized="false">
     <input type="hidden" name="{{ $name }}" value="{{ $isAllSelected ? 'all' : implode(',', $selectedArray) }}" class="project-value-input">
     
-    <div class="dropdown w-100">
-        <button class="btn btn-sm btn-outline-secondary dropdown-toggle w-100 text-start project-dropdown-btn" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false">
+    <div class="btn-group dropup w-100">
+        <button class="btn btn-sm btn-outline-secondary dropdown-toggle w-100 text-start project-dropdown-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
             <span class="selected-text">
                 @if($isAllSelected)
                     ALL Project
@@ -34,7 +34,7 @@
                 @endif
             </span>
         </button>
-        <ul class="dropdown-menu w-100 project-dropdown-menu" data-bs-popper="fixed" style="max-height: 300px; overflow-y: auto;">
+        <ul class="dropdown-menu w-100 project-dropdown-menu" style="max-height: 480px; min-width: 380px; overflow-y: auto;">
             <li>
                 <label class="dropdown-item">
                     <input type="checkbox" class="form-check-input me-2 project-checkbox-all" value="all" {{ $isAllSelected ? 'checked' : '' }}>
@@ -59,6 +59,7 @@
 <style>
     .project-multiselect-wrapper .project-dropdown-menu {
         min-width: 320px;
+        z-index: 9999;
     }
     .project-multiselect-wrapper .project-dropdown-btn {
         overflow: hidden;

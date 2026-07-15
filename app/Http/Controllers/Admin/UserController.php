@@ -30,12 +30,17 @@ class UserController extends Controller
             'password' => 'required|string|min:4',
         ]);
 
-        User::create([
-            // schema users menggunakan kolom nama (bukan name)
+        $user = User::create([
+            'name' => $request->nama,
             'nama' => $request->nama,
             'username' => $request->username,
-            'password' => Hash::make($request->password), // Password aman terenkripsi Bcrypt
+            'password' => Hash::make($request->password),
+            'email' => $request->username . '@cdbfinance.test',
         ]);
+
+        // Set id_user = id for compatibility with legacy code
+        $user->id_user = $user->id;
+        $user->save();
 
         return redirect()->route('admin.user.index')->with('success', 'User baru berhasil didaftarkan!');
     }

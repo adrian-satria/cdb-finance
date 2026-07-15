@@ -14,7 +14,7 @@
                     <select name="kode_project" class="form-select form-select-sm">
                         <option value="">Semua Project</option>
                         @foreach($projects as $p)
-                        <option value="{{ $p->kode_project }}" {{ $kodeProject == $p->kode_project ? 'selected' : '' }}>{{ $p->kode_project }}</option>
+                        <option value="{{ $p->kode_project }}" {{ $kodeProject == $p->kode_project ? 'selected' : '' }}>{{ $p->kode_project }} - {{ $p->nama_project }}</option>
                         @endforeach
                     </select>
                 </div>
