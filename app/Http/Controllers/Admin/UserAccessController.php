@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Log;
 
 class UserAccessController extends Controller
 {
-    private const VALID_ROLES = [
+    public const VALID_ROLES = [
         'ADMIN', 'MAKER', 'CHECKER', 'KASIR_PUSAT', 'DIREKTUR', 'MANAGER_KEUANGAN',
         'AREA_MANAGER', 'FINANCE_PROJECT', 'PROJECT_MANAGER', 'MANAGER_PKP',
         'KOORDINATOR_KEUANGAN', 'KOORDINATOR_PK', 'KOORDINATOR_TC',
