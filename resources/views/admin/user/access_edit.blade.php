@@ -5,7 +5,7 @@
 @section('content')
 <div class="container py-4">
     <div class="row justify-content-center">
-        <div class="col-md-7">
+        <div class="col-12">
             <div class="card shadow-sm border-0" style="border-radius: var(--radius-lg);">
                 <div class="card-header bg-white py-3 border-light">
                     <h5 class="fw-bold text-primary m-0"><i class="fa-solid fa-user-shield me-2"></i>Edit Akses User</h5>
@@ -59,7 +59,7 @@
                         </div>
 
                         <div class="table-responsive mb-3">
-                            <table class="table table-sm align-middle" style="border: 1px solid rgba(0,0,0,.06); border-radius: 10px; overflow:hidden;">
+                            <table class="table table-sm align-middle" style="border: 1px solid rgba(0,0,0,.06); border-radius: 10px;">
                                 <thead class="table-light">
                                     <tr>
                                         <th style="width:8%" class="text-center">#</th>
@@ -119,20 +119,18 @@
                                                 @error("akses.$rowIndex.kode_area")
                                                     <div class="invalid-feedback">{{ $message }}</div>
                                                 @enderror
-                                                <div class="form-text text-muted role-hint" data-row="{{ $rowIndex }}"></div>
                                             </td>
 
                                         <td>
                                             @php
                                                 $selectedCsv = old("akses.$rowIndex.kode_project", $a->kode_project);
                                             @endphp
-                                            @include('admin.user._project_multiselect', [
-                                                'name' => "akses[$rowIndex][kode_project]",
-                                                'projects' => $projects,
-                                                'selectedCsv' => $selectedCsv
-                                            ])
-                                            <div class="form-text text-muted project-hint" data-row="{{ $rowIndex }}"></div>
-                                        </td>
+                                             @include('admin.user._project_multiselect', [
+                                                 'name' => "akses[$rowIndex][kode_project]",
+                                                 'projects' => $projects,
+                                                 'selectedCsv' => $selectedCsv
+                                             ])
+                                         </td>
 
                                         </tr>
 
@@ -170,19 +168,17 @@
                                                     <option value="{{ $ar->kode_area }}" {{ old("akses.$extraIdx.kode_area") === $ar->kode_area ? 'selected' : '' }}>{{ $ar->nama_area }} ({{ $ar->kode_area }})</option>
                                                 @endforeach
                                             </select>
-                                            @error("akses.$extraIdx.kode_area")
-                                                <div class="invalid-feedback">{{ $message }}</div>
-                                            @enderror
-                                            <div class="form-text text-muted role-hint" data-row="{{ $extraIdx }}"></div>
-                                        </td>
+                                             @error("akses.$extraIdx.kode_area")
+                                                 <div class="invalid-feedback">{{ $message }}</div>
+                                             @enderror
+                                         </td>
                                         <td>
-                                            @include('admin.user._project_multiselect', [
-                                                'name' => "akses[$extraIdx][kode_project]",
-                                                'projects' => $projects,
-                                                'selectedCsv' => old("akses.$extraIdx.kode_project")
-                                            ])
-                                            <div class="form-text text-muted project-hint" data-row="{{ $extraIdx }}"></div>
-                                        </td>
+                                             @include('admin.user._project_multiselect', [
+                                                 'name' => "akses[$extraIdx][kode_project]",
+                                                 'projects' => $projects,
+                                                 'selectedCsv' => old("akses.$extraIdx.kode_project")
+                                             ])
+                                         </td>
 
                                     </tr>
                                 </tbody>
@@ -210,32 +206,20 @@
                         document.addEventListener('DOMContentLoaded', function () {
                             const projectRoles = ['FINANCE_PROJECT', 'PROJECT_MANAGER', 'MANAGER_KEUANGAN'];
 
-                            const buildHint = (role) => {
-                                if (projectRoles.includes(role)) {
-                                    return 'Project-scoped role: pilih kode_project. Untuk role ini, pilih kode_area PUSAT atau area login default.';
-                                }
-                                return 'Area-scoped role: pilih kode_area. Kode_project hanya diperlukan untuk peran project-scoped.';
-                            };
-
                             const updateRow = (rowIndex) => {
                                 const roleSelect = document.querySelector(`select[name='akses[${rowIndex}][role]']`);
                                 const projectSelect = document.querySelector(`input[name='akses[${rowIndex}][kode_project]']`);
-                                const roleHint = document.querySelector(`.role-hint[data-row='${rowIndex}']`);
-                                const projectHint = document.querySelector(`.project-hint[data-row='${rowIndex}']`);
 
-                                if (!roleSelect || !projectSelect || !roleHint || !projectHint) {
+                                if (!roleSelect || !projectSelect) {
                                     return;
                                 }
 
                                 const roleValue = roleSelect.value;
-                                roleHint.textContent = buildHint(roleValue);
 
                                 if (projectRoles.includes(roleValue)) {
                                     projectSelect.required = true;
-                                    projectHint.textContent = 'Wajib: pilih kode_project untuk role project-scoped.';
                                 } else {
                                     projectSelect.required = false;
-                                    projectHint.textContent = 'Opsional: pilih project jika Anda ingin mengikat role ini ke satu project.';
                                 }
                             };
 
