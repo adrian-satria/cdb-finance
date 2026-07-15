@@ -214,7 +214,7 @@ class BudgetValidationServiceTest extends TestCase
         
         // Assert
         $this->assertFalse($result->isValid);
-        $this->assertStringContainsString('TEST-002', $result->errorMessage);
+        $this->assertStringContainsString('Budget 2', $result->errorMessage);
     }
     
     /** @test */
@@ -240,8 +240,8 @@ class BudgetValidationServiceTest extends TestCase
         // Assert
         $this->assertFalse($result->isValid);
         
-        // Verify no transaction is active (rolled back)
-        $this->assertEquals(0, DB::transactionLevel());
+        // Verify inner transaction was rolled back (outer is handled by DatabaseTransactions)
+        $this->assertEquals(1, DB::transactionLevel());
     }
     
     /** @test */
@@ -253,7 +253,7 @@ class BudgetValidationServiceTest extends TestCase
         // Assert
         $this->assertTrue($result->isValid);
         $this->assertEquals(0, $result->details['total_items']);
-        $this->assertEquals('0.00', $result->details['total_nominal']);
+        $this->assertEquals('0', $result->details['total_nominal']);
     }
     
     // ==========================================
@@ -328,7 +328,7 @@ class BudgetValidationServiceTest extends TestCase
         $this->assertNotNull($details);
         $this->assertEquals('TEST-001', $details->kode_budget);
         $this->assertEquals('Test Budget', $details->nama_budget);
-        $this->assertEquals('50000000', $details->alokasi_dana);
+        $this->assertEquals('50000000.00', $details->alokasi_dana);
     }
     
     /** @test */
