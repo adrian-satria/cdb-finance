@@ -2,43 +2,27 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Collection;
 
 class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
     protected $table = 'users';
-
-    // DB Anda: users PK = id_user
     protected $primaryKey = 'id_user';
 
     public $timestamps = false;
 
-    public function akses()
-    {
-        return $this->hasMany(UserAccess::class, 'id_user', 'id_user');
-    }
-
-    public function getAuthPassword()
-    {
-        return $this->password;
-    }
-
     protected $fillable = [
-        // sesuai struktur tabel: id_user, username, password, signature_path, nama_lengkap, nama
+        'name',
         'username',
-        'nama', // kolom nama (bukan name)
-
+        'nama',
+        'email',
         'password',
-
-        // untuk audit/signature (jika kolom ada di DB)
         'signature_path',
-
-        // opsional (jika kolom ada di DB)
         'nama_lengkap',
     ];
 
@@ -53,5 +37,81 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    // ==========================================
+    // Relationships
+    // ==========================================
+
+    public function akses()
+    {
+        return $this->hasMany(UserAccess::class, 'id_user', 'id_user');
+    }
+
+    public function sppAsMaker()
+    {
+        return $this->hasMany(SuratPermintaan::class, 'id_maker', 'id_user');
+    }
+
+    // ==========================================
+    // Role Check Methods
+    // ==========================================
+
+    public function hasRole(string $role): bool
+    {
+        return $this->akses()->where('role', $role)->exists();
+    }
+
+    public function hasAnyRole(array $roles): bool
+    {
+        return $this->akses()->whereIn('role', $roles)->exists();
+    }
+
+    public function getActiveRolesAttribute(): Collection
+    {
+        return $this->akses()->pluck('role')->unique();
+    }
+
+    public function getPrimaryRoleAttribute(): ?string
+    {
+        return $this->akses()->value('role');
+    }
+
+    // ==========================================
+    // Access Check Methods
+    // ==========================================
+
+    public function hasAccessToProject(?string $kodeProject): bool
+    {
+        if ($kodeProject === null || $kodeProject === 'all') {
+            return true;
+        }
+
+        return $this->akses()
+            ->where(function ($q) use ($kodeProject) {
+                $q->where('kode_project', $kodeProject)
+                  ->orWhere('kode_project', 'all')
+                  ->orWhereNull('kode_project');
+            })
+            ->exists();
+    }
+
+    public function hasAccessToArea(?string $kodeArea): bool
+    {
+        if ($kodeArea === null) {
+            return true;
+        }
+
+        return $this->akses()
+            ->where(function ($q) use ($kodeArea) {
+                $q->where('kode_area', $kodeArea)
+                  ->orWhereNull('kode_area');
+            })
+            ->exists();
+    }
+
+    public function getAuthPassword()
+    {
+        return $this->password;
     }
 }
