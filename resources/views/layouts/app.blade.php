@@ -3,156 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'CDB Finance - B-SMART')</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght=300;400;500;600;700;800&family=DM+Sans:wght=300;400;500;600;700&display=swap');
-
-        :root {
-          --primary:        #1a4f8a;
-          --primary-light:  #2563eb;
-          --primary-dark:   #0f2d5a;
-          --accent:         #38bdf8;
-          --accent-soft:    #e0f2fe;
-          --success:        #10b981;
-          --warning:        #f59e0b;
-          --danger:         #ef4444;
-          --info:           #06b6d4;
-
-          --bg-base:        #f0f4f8;
-          --bg-white:       #ffffff;
-          --bg-sidebar:     #0f1f3d;
-          --text-primary:   #1e293b;
-          --text-secondary: #64748b;
-          --text-muted:     #94a3b8;
-          --border:         #e2e8f0;
-          --border-light:   #f1f5f9;
-
-          --sidebar-width:  260px;
-          --sidebar-collapsed: 70px;
-          --radius-md:  10px;
-          --radius-lg:  14px;
-          --transition: all .2s cubic-bezier(.4,0,.2,1);
-          --font-main:  'Plus Jakarta Sans', sans-serif;
-          --font-body:  'DM Sans', sans-serif;
-          --shadow-card: 0 2px 12px rgba(15,45,90,.08);
-        }
-
-        body {
-          font-family: var(--font-body);
-          background: var(--bg-base);
-          color: var(--text-primary);
-        }
-
-        .app-wrapper { display: flex; min-height: 100vh; }
-
-        .sidebar {
-          position: fixed; top: 0; left: 0;
-          width: var(--sidebar-width); height: 100vh;
-          background: var(--bg-sidebar); display: flex; flex-direction: column;
-          z-index: 1000; transition: width .3s; overflow: hidden;
-        }
-        .sidebar.collapsed { width: var(--sidebar-collapsed); }
-
-        .sidebar-brand {
-          display: flex; align-items: center; gap: 12px; padding: 20px 16px;
-          border-bottom: 1px solid rgba(255,255,255,.07); min-height: 72px; text-decoration: none;
-        }
-        .sidebar-logo {
-          width: 38px; height: 38px; background: linear-gradient(135deg, var(--primary-light), var(--accent));
-          border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center;
-          font-family: var(--font-main); font-weight: 800; color: #fff;
-        }
-        .sidebar-app-name { font-family: var(--font-main); font-weight: 800; font-size: 15px; color: #fff; }
-
-        .sidebar-nav { flex: 1; padding: 12px 0; }
-        .nav-section-label { font-size: 10px; font-weight: 700; color: rgba(255,255,255,.25); text-transform: uppercase; padding: 10px 20px 4px; }
-
-        .sidebar-item {
-          display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; margin: 2px 8px;
-          border-radius: var(--radius-md); color: rgba(255,255,255,.6); text-decoration: none; transition: var(--transition); cursor: pointer;
-        }
-        .sidebar-item:hover { background: rgba(255,255,255,.07); color: #fff; }
-        .sidebar-item.active { background: linear-gradient(135deg, var(--primary-light), #1d4ed8); color: #fff; }
-        
-        .sidebar-item .nav-icon { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 6px; background: rgba(255,255,255,.07); margin-right: 6px; }
-
-        .sidebar-child-menu a {
-          display: flex; align-items: center; padding: 10px 16px 10px 48px; margin: 2px 8px;
-          border-radius: var(--radius-md); color: rgba(255,255,255,.5); text-decoration: none; font-size: 13px;
-        }
-        .sidebar-child-menu a:hover { color: #fff; background: rgba(255,255,255,.04); }
-        .sidebar-child-menu a.active { color: #fff; background: rgba(255,255,255,.08); }
-
-        .sidebar-item[aria-expanded="true"] .toggle-icon { transform: rotate(180deg); }
-        .toggle-icon { transition: transform .2s; }
-
-        .sidebar-footer { padding: 12px 8px; border-top: 1px solid rgba(255,255,255,.07); }
-        .sidebar-user { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius-md); background: rgba(255,255,255,.05); cursor: pointer; }
-        .user-avatar { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, var(--primary-light), var(--accent)); display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; }
-
-        .main-content { margin-left: var(--sidebar-width); flex: 1; display: flex; flex-direction: column; min-height: 100vh; transition: margin-left .3s; position: relative; z-index: 1; width: calc(100% - var(--sidebar-width)); }
-        .main-content.expanded { margin-left: var(--sidebar-collapsed); width: calc(100% - var(--sidebar-collapsed)); }
-
-        .topbar { position: sticky; top: 0; z-index: 500; background: rgba(240,244,248,.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 0 24px; height: 64px; display: flex; align-items: center; gap: 16px; }
-        .topbar-toggle { width: 36px; height: 36px; border: none; background: #fff; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-secondary); }
-        .page-content { flex: 1; padding: 24px; position: relative; z-index: 250; }
-        .badge-primary-custom { background: #eff6ff; color: var(--primary-light); font-weight: 600; padding: 4px 10px; border-radius: 99px; }
-
-        .sidebar {
-            width: 260px;
-            transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .sidebar.collapsed {
-            width: 72px;
-        }
-        .sidebar.collapsed .sidebar-app-name,
-        .sidebar.collapsed .nav-section-label,
-        .sidebar.collapsed .nav-label,
-        .sidebar.collapsed .toggle-icon,
-        .sidebar.collapsed .user-info,
-        .sidebar.collapsed .sidebar-brand .sidebar-title-wrap {
-            display: none !important;
-        }
-        .sidebar.collapsed .sidebar-item {
-            justify-content: center;
-            padding: 12px 0 !important;
-            border-radius: 16px;
-            margin: 4px 12px;
-        }
-        .sidebar.collapsed .sidebar-item .d-flex {
-            justify-content: center;
-            width: 100%;
-        }
-        .sidebar.collapsed .nav-icon {
-            margin: 0 !important;
-            font-size: 18px;
-        }
-        .sidebar.collapsed .sidebar-item.active {
-            width: 48px;
-            height: 48px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 4px auto;
-        }
-        .sidebar.collapsed .sidebar-child-menu {
-            display: none !important;
-        }
-        .sidebar.collapsed .sidebar-footer {
-            padding: 12px 0;
-        }
-        .sidebar.collapsed .sidebar-user {
-            justify-content: center;
-            padding: 0;
-        }
-        .sidebar.collapsed .sidebar-user .ms-auto {
-            display: none !important;
-        }
-    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    @vite(['resources/css/app.css'])
 </head>
 <body>
 
@@ -345,58 +204,7 @@
 @stack('modals')
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-    document.getElementById('toggleSidebarBtn').addEventListener('click', function() {
-        document.getElementById('sidebarMenu').classList.toggle('collapsed');
-        document.getElementById('mainContent').classList.toggle('expanded');
-    });
-
-    // Fetch notifications
-    function fetchNotifications() {
-        fetch('/notifications/fetch-unread')
-            .then(r => r.json())
-            .then(data => {
-                const badge = document.getElementById('notifBadge');
-                const container = document.getElementById('notifContainer');
-                
-                if (data.count > 0) {
-                    badge.textContent = data.count;
-                    badge.style.display = 'inline-block';
-                    
-                    let html = '';
-                    data.notifications.forEach(n => {
-                        html += `
-                            <div class="dropdown-item px-2 py-2 border-bottom" style="cursor: pointer; font-size: 12px;" onclick="markAsRead(${n.id})">
-                                <div class="fw-semibold text-dark">${n.title}</div>
-                                <div class="text-muted small">${n.message}</div>
-                                <div class="text-muted mt-1" style="font-size: 10px;">${n.created_at}</div>
-                            </div>
-                        `;
-                    });
-                    container.innerHTML = html;
-                } else {
-                    badge.style.display = 'none';
-                }
-            })
-            .catch(err => console.error('Failed to fetch notifications:', err));
-    }
-
-    function markAsRead(id) {
-        fetch('/notifications/' + id + '/read', {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Content-Type': 'application/json'
-            }
-        }).then(() => {
-            fetchNotifications();
-        });
-    }
-
-    // Fetch on load and every 30 seconds
-    fetchNotifications();
-    setInterval(fetchNotifications, 30000);
-</script>
+@vite(['resources/js/app.js'])
 @stack('scripts')
 </body>
 </html>

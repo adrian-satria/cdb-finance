@@ -1,0 +1,37 @@
+.btn-bsmart-primary {
+  background: #1a73e8 !important;
+  color: #fff !important;
+  font-weight: 600;
+  padding: 12px 28px;
+  border: none;
+  border-radius: 100px !important;
+  box-shadow: 0 2px 6px rgba(26,115,232,0.15);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.btn-bsmart-primary:hover { background-color: #1557b0 !important; }
+
+.btn-bsmart-secondary {
+  background: #ffffff;
+  color: #5f6368;
+  font-weight: 600;
+  padding: 12px 28px;
+  border: 1px solid #e1e3e5;
+  border-radius: 100px !important;
+  cursor: pointer;
+  margin-right: 8px;
+  transition: background-color 0.2s;
+}
+.btn-bsmart-secondary:hover { background-color: #f8f9fa; }
+
+.btn-add-row {
+  background: transparent;
+  color: #1a73e8;
+  border: 1px solid #e1e3e5;
+  border-radius: 100px;
+  padding: 8px 24px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-add-row:hover { background: #f1f3f4; }

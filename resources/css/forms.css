@@ -1,0 +1,32 @@
+.form-label-custom {
+  font-size: 13px;
+  font-weight: 500;
+  color: #5f6368;
+  margin-bottom: 8px;
+  display: block;
+}
+.form-control-custom, .form-select-custom {
+  font-size: 14px;
+  color: #3c4043;
+  background-color: #ffffff;
+  border: 1px solid #e1e3e5 !important;
+  border-radius: 12px !important;
+  padding: 10px 14px;
+  width: 100%;
+  transition: all 0.2s ease-in-out;
+}
+.form-control-custom:focus, .form-select-custom:focus {
+  border-color: #1a73e8 !important;
+  box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.15) !important;
+  outline: none;
+}
+.form-control-custom[readonly] {
+  background-color: #f1f3f4 !important;
+  cursor: not-allowed;
+  color: #5f6368;
+}
+.form-divider {
+  border: 0;
+  border-top: 1px dashed #e1e3e5;
+  margin: 28px 0;
+}

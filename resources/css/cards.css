@@ -1,0 +1,20 @@
+.stitch-card {
+  background: #ffffff;
+  border: none !important;
+  border-radius: 24px !important;
+  box-shadow: 0 4px 20px rgba(26, 115, 232, 0.02) !important;
+  margin-bottom: 24px;
+}
+.stitch-card-header {
+  padding: 24px 24px 12px 24px;
+  border-bottom: none !important;
+  display: flex; align-items: center; gap: 12px;
+}
+.stitch-card-title {
+  color: #1f1f1f;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  margin: 0;
+}
+.stitch-card-body { padding: 24px; }

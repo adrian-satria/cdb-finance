@@ -1,0 +1,35 @@
+:root {
+  --primary:        #1a4f8a;
+  --primary-light:  #2563eb;
+  --primary-dark:   #0f2d5a;
+  --accent:         #38bdf8;
+  --accent-soft:    #e0f2fe;
+  --success:        #10b981;
+  --warning:        #f59e0b;
+  --danger:         #ef4444;
+  --info:           #06b6d4;
+
+  --bg-base:        #f0f4f8;
+  --bg-white:       #ffffff;
+  --bg-sidebar:     #0f1f3d;
+  --text-primary:   #1e293b;
+  --text-secondary: #64748b;
+  --text-muted:     #94a3b8;
+  --border:         #e2e8f0;
+  --border-light:   #f1f5f9;
+
+  --sidebar-width:  260px;
+  --sidebar-collapsed: 70px;
+  --radius-md:  10px;
+  --radius-lg:  14px;
+  --transition: all .2s cubic-bezier(.4,0,.2,1);
+  --font-main:  'Plus Jakarta Sans', sans-serif;
+  --font-body:  'DM Sans', sans-serif;
+  --shadow-card: 0 2px 12px rgba(15,45,90,.08);
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg-base);
+  color: var(--text-primary);
+}
