@@ -1,11 +1,16 @@
 @extends('layouts.app')
+@push('styles')
+@vite(['resources/css/dashboard.css'])
+@endpush
 @section('title', 'Dashboard | B-SMART')
 @section('content')
 <div class="container-fluid py-4">
+
     @if(session('success'))
         <div class="alert alert-success border-0 shadow-sm mb-4">{{ session('success') }}</div>
     @endif
 
+    {{-- Header --}}
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h4 class="fw-bold text-dark m-0">
             <i class="fa-solid fa-gauge-high text-primary me-2"></i>Dashboard
@@ -13,6 +18,83 @@
         </h4>
     </div>
 
+    {{-- Project Filter (Admin only) --}}
+    @if(session('role') === 'ADMIN' && $projects->isNotEmpty())
+    <form method="GET" class="row g-2 align-items-end mb-4">
+        <div class="col-auto">
+            <label class="form-label small text-muted mb-1">Filter Project</label>
+            <select name="kode_project" class="form-select form-select-sm" onchange="this.form.submit()" style="min-width: 220px;">
+                <option value="">Semua Project</option>
+                @foreach($projects as $p)
+                    <option value="{{ $p->kode_project }}" {{ $selectedProject == $p->kode_project ? 'selected' : '' }}>
+                        {{ $p->kode_project }} - {{ $p->nama_project }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+        @if($selectedProject)
+        <div class="col-auto">
+            <a href="/dashboard" class="btn btn-outline-danger btn-sm"><i class="fa-solid fa-xmark me-1"></i>Reset</a>
+        </div>
+        @endif
+    </form>
+    @endif
+
+    {{-- Financial Summary Cards --}}
+    @if(isset($totalBudget))
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm" style="border-radius: 14px; border-left: 4px solid #2563eb !important;">
+                <div class="card-body">
+                    <p class="text-muted small mb-1">Total Budget</p>
+                    <h5 class="fw-bold text-primary m-0">Rp {{ number_format($totalBudget, 0, ',', '.') }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm" style="border-radius: 14px; border-left: 4px solid #10b981 !important;">
+                <div class="card-body">
+                    <p class="text-muted small mb-1">Terserap</p>
+                    <h5 class="fw-bold text-success m-0">Rp {{ number_format($totalTerserap, 0, ',', '.') }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm" style="border-radius: 14px; border-left: 4px solid #f59e0b !important;">
+                <div class="card-body">
+                    <p class="text-muted small mb-1">Sisa Budget</p>
+                    <h5 class="fw-bold text-warning m-0">Rp {{ number_format($sisaBudget, 0, ',', '.') }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm" style="border-radius: 14px; border-left: 4px solid {{ $persenUtilisasi > 90 ? '#ef4444' : '#06b6d4' }} !important;">
+                <div class="card-body">
+                    <p class="text-muted small mb-1">Utilisasi</p>
+                    <h5 class="fw-bold m-0 {{ $persenUtilisasi > 90 ? 'text-danger' : 'text-info' }}">
+                        {{ $persenUtilisasi }}%
+                        @if($persenUtilisasi > 90) <i class="fa-solid fa-triangle-exclamation ms-1"></i> @endif
+                    </h5>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Critical Budget Alert (Admin only) --}}
+    @if(isset($criticalBudgets) && $criticalBudgets->isNotEmpty())
+    <div class="alert alert-danger border-0 shadow-sm mb-4 d-flex align-items-center gap-2">
+        <i class="fa-solid fa-triangle-exclamation fs-5"></i>
+        <div>
+            <strong>Peringatan!</strong> {{ $criticalBudgets->count() }} project dengan utilisasi &ge; 90%:
+            @foreach($criticalBudgets as $b)
+                <span class="badge bg-danger ms-1">{{ $b->kode_project }} ({{ $b->persen }}%)</span>
+            @endforeach
+        </div>
+    </div>
+    @endif
+
+    {{-- Stat Cards --}}
     <div class="row g-3 mb-4">
         <div class="col-md-3">
             <div class="card border-0 shadow-sm" style="border-radius: 14px; border-left: 4px solid #f59e0b !important;">
@@ -76,38 +158,45 @@
         </div>
     </div>
 
-    @if(isset($totalBudget) && isset($totalTerserap))
+    {{-- Budget per Project Progress Bars (Admin only) --}}
+    @if(isset($budgetPerProject) && $budgetPerProject->isNotEmpty())
     <div class="card border-0 shadow-sm mb-4" style="border-radius: 14px;">
         <div class="card-body p-4">
-            <h6 class="fw-bold mb-3"><i class="fa-solid fa-chart-pie me-2 text-primary"></i>Budget Overview</h6>
-            <div class="row align-items-center">
-                <div class="col-md-8">
-                    <div class="progress" style="height: 24px; border-radius: 12px;">
-                        @php $persen = $totalBudget > 0 ? round(($totalTerserap / $totalBudget) * 100, 1) : 0; @endphp
-                        <div class="progress-bar bg-primary" style="width: {{ min($persen, 100) }}%; font-size: 12px; font-weight: 600;">
-                            {{ $persen }}%
+            <h6 class="fw-bold mb-3"><i class="fa-solid fa-chart-simple me-2 text-primary"></i>Budget vs Actual per Project</h6>
+            @foreach($budgetPerProject as $b)
+                @php
+                    $barColor = $b->persen >= 90 ? 'bg-danger' : ($b->persen >= 75 ? 'bg-warning' : 'bg-primary');
+                    $textColor = $b->persen >= 90 ? 'text-danger' : 'text-dark';
+                @endphp
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span class="fw-semibold {{ $textColor }}">
+                            {{ $b->kode_project }}
+                            @if($b->persen >= 90) <i class="fa-solid fa-triangle-exclamation ms-1"></i> @endif
+                        </span>
+                        <span class="text-muted">
+                            Rp {{ number_format($b->total_terserap, 0, ',', '.') }} / Rp {{ number_format($b->total_alokasi, 0, ',', '.') }} ({{ $b->persen }}%)
+                        </span>
+                    </div>
+                    <div class="progress" style="height: 16px; border-radius: 8px;">
+                        <div class="progress-bar {{ $barColor }}" 
+                             style="width: {{ min($b->persen, 100) }}%; font-size: 10px; font-weight: 600;">
+                            {{ $b->persen }}%
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4 text-end">
-                    <small class="text-muted">Alokasi: <span class="fw-bold text-dark">Rp {{ number_format($totalBudget, 0, ',', '.') }}</span></small>
-                    <br>
-                    <small class="text-muted">Terserap: <span class="fw-bold text-primary">Rp {{ number_format($totalTerserap, 0, ',', '.') }}</span></small>
-                </div>
-            </div>
+            @endforeach
         </div>
     </div>
     @endif
 
-    @if(isset($monthlyChart) && count($monthlyChart) > 0)
+    {{-- Monthly Chart --}}
+    @if(isset($monthlyChart) && $monthlyChart->isNotEmpty())
     <div class="card border-0 shadow-sm mb-4" style="border-radius: 14px;">
         <div class="card-body p-4">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h6 class="fw-bold m-0"><i class="fa-solid fa-chart-line me-2 text-success"></i>Tren Pengajuan Bulanan ({{ date('Y') }})</h6>
-                <div class="d-flex gap-3">
-                    @php $totalTahun = $monthlyChart->sum('total'); @endphp
-                    <small class="text-muted">Total SPP: <span class="fw-bold text-dark">{{ $totalTahun }}</span></small>
-                </div>
+                <small class="text-muted">Total SPP: <span class="fw-bold text-dark">{{ $monthlyChart->sum('total') }}</span></small>
             </div>
             <div style="height: 220px; position: relative;">
                 <canvas id="monthlyChart"></canvas>
@@ -116,6 +205,7 @@
     </div>
     @endif
 
+    {{-- My Tasks --}}
     <div class="card border-0 shadow-sm" style="border-radius: 14px;">
         <div class="card-body p-4">
             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -204,7 +294,7 @@
                         callbacks: {
                             afterLabel: function(context) {
                                 var data = @json($monthlyChart);
-                                return 'Nominal: Rp ' + data[context.dataIndex].nominal.toLocaleString('id-ID');
+                                return 'Nominal: Rp ' + (data[context.dataIndex]?.nominal ?? 0).toLocaleString('id-ID');
                             }
                         }
                     }
@@ -212,10 +302,7 @@
                 scales: {
                     y: {
                         beginAtZero: true,
-                        ticks: {
-                            stepSize: 1,
-                            precision: 0
-                        },
+                        ticks: { stepSize: 1, precision: 0 },
                         grid: { color: 'rgba(0,0,0,0.06)' }
                     },
                     x: {
