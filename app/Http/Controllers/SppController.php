@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Spp\StoreSppRequest;
+use App\Http\Requests\Spp\ValidateSppRequest;
+use App\Http\Requests\Spp\DisburseSppRequest;
 use Illuminate\Http\Request;
 use App\Models\SuratPermintaan;
 use App\Models\Project;
@@ -12,30 +15,26 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\NotificationService;
+use App\Services\SppWorkflowService;
+use App\Services\BudgetValidationService;
+use App\Services\SppNumberGeneratorService;
+use App\Services\FileUploadService;
 
 class SppController extends Controller
 {
+    public function __construct(
+        protected SppWorkflowService $workflowService,
+        protected BudgetValidationService $budgetService,
+        protected SppNumberGeneratorService $numberService,
+        protected FileUploadService $fileService
+    ) {}
+
     // =========================================================================
     // Halaman Form Pembuatan SPP Baru (Maker)
     // =========================================================================
     public function create()
     {
-        $tahun = date('Y');
-        $bulan_romawi = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
-        $bulan = $bulan_romawi[date('n')];
-
-        // Ambil nomor terakhir berdasarkan waktu dibuat (created_at)
-        $terakhir = SuratPermintaan::whereYear('created_at', $tahun)
-                    ->orderBy('created_at', 'desc')
-                    ->first();
-
-        if ($terakhir) {
-            $no_urut = (int) substr($terakhir->no_surat, -3) + 1;
-        } else {
-            $no_urut = 1;
-        }
-
-        $nomor_baru = $tahun . "/" . $bulan . "/SPP/PROJECT-X/" . str_pad($no_urut, 3, '0', STR_PAD_LEFT);
+        $nomor_baru = $this->numberService->generateNextNumber(now()->format('Y-m-d'));
 
         $projects = Project::all();
         $master_budgets = DB::table('master_budget')->get()->groupBy('kode_project');
@@ -48,199 +47,82 @@ class SppController extends Controller
     // =========================================================================
     // 1. PROSES SIMPAN DATA SPP BARU (MAKER - BUDGET CEILING LOCK)
     // =========================================================================
-    public function store(Request $request)
+    public function store(StoreSppRequest $request)
     {
-        // catatan: nomor surat dihitung ulang server-side untuk menghindari race condition
-        $request->validate([
-            'no_surat' => 'nullable|string', // tidak dijadikan source of truth
-            'tanggal' => 'required|date',
-            'kode_project' => 'required|string',
-            'items' => 'required|array|min:1',
-            'items.*.kode_budget' => 'required|string',
-            'items.*.jumlah' => 'required|numeric|min:0.01|max:999999999999.99',
-            'file_lampiran' => 'nullable|array|max:5',
-            'file_lampiran.*' => 'file|mimes:pdf,jpg,jpeg,png|max:5120',
-        ]);
-
-        // Gunakan Database Transaction dengan Pessimistic Locking tingkat tinggi
-        DB::beginTransaction();
-
         try {
-            $totalNominal = '0'; // Gunakan string untuk presisi tinggi
-
-            // Ambil id_maker dari user login untuk FK surat_permintaan.id_maker
-            $idMaker = Auth::user()->id_user;
-
-            // -----------------------------------------------------------------
-            // Generator nomor surat (anti race) berdasarkan periode tahun/bulan
-            // -----------------------------------------------------------------
-            $tahun = (int) date('Y', strtotime($request->tanggal));
-            $bulan_romawi = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
-            $bulan = $bulan_romawi[(int) date('n', strtotime($request->tanggal))];
-
-            $terakhir = DB::table('surat_permintaan')
-                ->whereYear('created_at', $tahun)
-                ->whereRaw('MONTH(created_at) = ?', [date('n', strtotime($request->tanggal))])
-                ->orderBy('created_at', 'desc')
-                ->lockForUpdate()
-                ->first();
-
-            if ($terakhir && !empty($terakhir->no_surat)) {
-                $no_urut = (int) substr($terakhir->no_surat, -3) + 1;
-            } else {
-                $no_urut = 1;
-            }
-
-            $nomor_baru = $tahun . "/" . $bulan . "/SPP/PROJECT-X/" . str_pad($no_urut, 3, '0', STR_PAD_LEFT);
-
-            $collision = DB::table('surat_permintaan')->where('no_surat', $nomor_baru)->exists();
-            if ($collision) {
-                DB::rollBack();
-                return redirect()->back()->withInput()->with('error', 'Terjadi konflik nomor surat. Silakan coba kembali.');
-            }
-
-            // DETEKSI DINI: Validasi Anggaran Sebelum Insert Data Apapun
-            foreach ($request->items as $item) {
-                $kodeBudget = $item['kode_budget'];
-                $jumlahDiminta = (string) $item['jumlah'];
-
-                // Tarik data budget master dan lakukan lock baris agar tidak terjadi race condition
-                $budget = DB::table('master_budget')
-                            ->where('kode_budget', $kodeBudget)
-                            ->lockForUpdate()
-                            ->first();
-
-                if (!$budget) {
-                    DB::rollBack();
-                    return redirect()->back()->withInput()->with('error', "Kode Budget [{$kodeBudget}] tidak ditemukan di sistem master!");
+            return DB::transaction(function () use ($request) {
+                // 1. Validate Budget Ceiling & Get Total Nominal
+                $validation = $this->budgetService->lockAndValidateMultiple($request->items);
+                
+                if (!$validation->isValid) {
+                    throw new \Exception($validation->errorMessage);
                 }
 
-                // Kalkulasi sisa saldo riil (Deterministic Calculation)
-                $sisaSaldo = bcsub((string)$budget->alokasi_dana, (string)$budget->terserap, 2);
+                $totalNominal = $validation->details['total_nominal'];
 
-                // Jika dana yang diminta bocor melampaui sisa plafon, blokir seketika!
-                if (bccomp($jumlahDiminta, $sisaSaldo, 2) === 1) {
-                    DB::rollBack();
+                // 2. Generate SPP Number
+                $nomorBaru = $this->numberService->generateNextNumber($request->tanggal);
 
-                    $namaBudget = $budget->nama_budget ?? $kodeBudget;
-                    $sisaSaldoFormat = number_format($sisaSaldo, 0, ',', '.');
-                    $dimintaFormat = number_format($jumlahDiminta, 0, ',', '.');
+                // 3. Determine Initial Workflow Position
+                $posisiAwal = $this->workflowService->determineInitialPosition($request->kode_project);
 
-                    return redirect()->back()->withInput()->with('error',
-                        "⚠️ PENGAKSESAN DANA DITOLAK! Saldo untuk akun [{$namaBudget}] tidak mencukupi. Sisa saldo saat ini: Rp {$sisaSaldoFormat}, namun Anda mencoba mengajukan: Rp {$dimintaFormat}."
+                // 4. Create SPP Record
+                SuratPermintaan::create([
+                    'no_surat' => $nomorBaru,
+                    'tanggal' => $request->tanggal,
+                    'jenis_permintaan' => $request->jenis_permintaan ?? 'PROJECT',
+                    'kode_project' => $request->kode_project,
+                    'kode_area' => $request->kode_area ?? (session('kode_area') ?? 'PUSAT'),
+                    'sumber_dana' => $request->sumber_dana,
+                    'bank_tujuan' => $request->bank_tujuan,
+                    'no_rekening_tujuan' => $request->no_rekening_tujuan,
+                    'nama_rekening_tujuan' => $request->nama_rekening_tujuan,
+                    'total_nominal' => $totalNominal,
+                    'status_surat' => 'Pending',
+                    'posisi_saat_ini' => $posisiAwal,
+                    'id_maker' => Auth::user()->id_user,
+                ]);
+
+                // 5. Create Detail Items
+                foreach ($request->items as $item) {
+                    DB::table('surat_permintaan_detail')->insert([
+                        'no_surat' => $nomorBaru,
+                        'keterangan' => $item['keterangan'] ?? '-',
+                        'kode_budget' => $item['kode_budget'],
+                        'nominal' => $item['jumlah'],
+                    ]);
+                }
+
+                // 6. Handle File Uploads
+                if ($request->hasFile('file_lampiran')) {
+                    $this->fileService->uploadSppAttachments(
+                        $request->file('file_lampiran'),
+                        $nomorBaru,
+                        'MAKER'
                     );
                 }
 
-                $totalNominal = bcadd($totalNominal, $jumlahDiminta, 2);
-            }
+                // Note: Audit log and SppHistory are now handled automatically by SppObserver
 
-            // Tentukan Alur Workflow awal (Next Step setelah Maker) berdasarkan Kode Project
-            $kodeProject = $request->kode_project;
-            $posisiAwal = 'MANAGER_KEUANGAN'; // Fallback default
+                // 7. Send Notification
+                NotificationService::sendToRole(
+                    $posisiAwal, 
+                    NotificationService::TYPE_NEW_SPP,
+                    "SPP Baru - {$nomorBaru}",
+                    "SPP baru senilai Rp " . number_format($totalNominal, 0, ',', '.') . " dari project {$request->kode_project} membutuhkan persetujuan Anda.",
+                    'SPP', 
+                    $nomorBaru
+                );
 
-            // Step awal approval setelah Maker
-            // Sesuaikan dengan SOP per kode project:
-            //  {38,40} -> Area Manager
-            //  {01} -> Koordinator Keuangan
-            //  {03} -> Koordinator PK
-            //  {07} -> Koordinator TC
-            //  {02} -> Koordinator Diklat
-            //  {04} -> Koordinator Klinik
-            //  {06} -> Koordinator Batra
-            if (in_array($kodeProject, ['38', '40'], true)) {
-                $posisiAwal = 'AREA_MANAGER';
-            } elseif (in_array($kodeProject, ['01'], true)) {
-                $posisiAwal = 'KOORDINATOR_KEUANGAN';
-            } elseif (in_array($kodeProject, ['03'], true)) {
-                $posisiAwal = 'KOORDINATOR_PK';
-            } elseif (in_array($kodeProject, ['07'], true)) {
-                $posisiAwal = 'KOORDINATOR_TC';
-            } elseif (in_array($kodeProject, ['06'], true)) {
-                $posisiAwal = 'KOORDINATOR_BATRA';
-            } elseif (in_array($kodeProject, ['04'], true)) {
-                $posisiAwal = 'KOORDINATOR_KLINIK';
-            } elseif (in_array($kodeProject, ['02'], true)) {
-                $posisiAwal = 'KOORDINATOR_DIKLAT';
-            }
-
-            // Simpan ke Tabel Utama Surat Permintaan
-            DB::table('surat_permintaan')->insert([
-                'no_surat' => $nomor_baru,
-                'tanggal' => $request->tanggal,
-                'jenis_permintaan' => $request->jenis_permintaan ?? 'PROJECT',
-                'kode_project' => $request->kode_project,
-                'kode_area' => $request->kode_area ?? (session('kode_area') ?? 'PUSAT'),
-                'sumber_dana' => $request->sumber_dana,
-                'bank_tujuan' => $request->bank_tujuan,
-                'no_rekening_tujuan' => $request->no_rekening_tujuan,
-                'nama_rekening_tujuan' => $request->nama_rekening_tujuan,
-                'total_nominal' => $totalNominal,
-                'status_surat' => 'Pending',
-                'posisi_saat_ini' => $posisiAwal,
-                'id_maker' => Auth::user()->id_user,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            // Simpan ke Tabel Detail
-            foreach ($request->items as $item) {
-                DB::table('surat_permintaan_detail')->insert([
-                    'no_surat' => $nomor_baru,
-                    'keterangan' => $item['keterangan'] ?? '-',
-                    'kode_budget' => $item['kode_budget'],
-                    'nominal' => $item['jumlah'],
-                ]);
-            }
-
-            // Simpan Berkas Lampiran
-            if ($request->hasFile('file_lampiran')) {
-                foreach ($request->file('file_lampiran') as $file) {
-                    $namaFile = 'maker_' . $nomor_baru . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-                    $file->move(storage_path('app/private/lampiran_spp'), $namaFile);
-
-                    DB::table('surat_permintaan_files')->insert([
-                        'no_surat' => $nomor_baru,
-                        'nama_file' => $namaFile,
-                        'kategori' => 'MAKER',
-                        'tipe_file' => $file->getClientOriginalExtension(),
-                    ]);
-                }
-            }
-
-            // Rekam Jejak Forensik Awal
-            self::simpanLog('INSERT_SPP', "Maker berhasil mendistribusikan berkas SPP baru No {$nomor_baru} senilai Rp " . number_format($totalNominal, 0, ',', '.'));
-
-            // Catat history SPP
-            DB::table('spp_history')->insert([
-                'no_surat' => $nomor_baru,
-                'status_dari' => null,
-                'status_ke' => 'Pending',
-                'posisi_dari' => null,
-                'posisi_ke' => $posisiAwal,
-                'aktor_username' => Auth::user()->username,
-                'aktor_role' => session('role'),
-                'keterangan' => 'Pembuatan SPP baru oleh ' . Auth::user()->username,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            // Kirim notifikasi ke role yang berhak approve
-            NotificationService::sendToRole($posisiAwal, NotificationService::TYPE_NEW_SPP,
-                'SPP Baru - ' . $nomor_baru,
-                "SPP baru senilai Rp " . number_format($totalNominal, 0, ',', '.') . " dari project {$kodeProject} membutuhkan persetujuan Anda.",
-                'SPP', $nomor_baru);
-
-            DB::commit();
-            return redirect('/spp')->with('success', 'Pengajuan dana SPP baru berhasil dikirim dan lolos verifikasi pagu anggaran!');
-
+                return redirect('/spp')->with('success', 'Pengajuan dana SPP baru berhasil dikirim dan lolos verifikasi pagu anggaran!');
+            });
         } catch (\Exception $e) {
-            DB::rollBack();
             Log::error('SPP store failed', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            return redirect()->back()->withInput()->with('error', 'Terjadi kesalahan sistem internal. Silakan coba kembali.');
+            return redirect()->back()->withInput()->with('error', $e->getMessage() ?: 'Terjadi kesalahan sistem internal. Silakan coba kembali.');
         }
     }
 
@@ -349,14 +231,8 @@ class SppController extends Controller
     // =========================================================================
     // 2. PROSES OTORISASI VALIDASI APPROVAL (STATE MACHINE ENFORCED)
     // =========================================================================
-    public function validasi(Request $request)
+    public function validasi(ValidateSppRequest $request)
     {
-        $request->validate([
-            'aksi' => 'required|in:approve,revise,reject',
-            'alasan' => 'nullable|string|max:255',
-            'file_checker.*' => 'nullable|file|mimes:pdf,png,jpg,jpeg|max:5120'
-        ]);
-
         $currentRole = session('role');
         $id = $request->query('no_surat') ?? $request->input('no_surat');
 
@@ -364,256 +240,146 @@ class SppController extends Controller
             return redirect()->back()->with('error', 'Nomor SPP tidak ditemukan untuk validasi.');
         }
 
-        DB::beginTransaction();
         try {
-            $surat = DB::table('surat_permintaan')->where('no_surat', $id)->lockForUpdate()->first();
+            return DB::transaction(function () use ($request, $currentRole, $id) {
+                $surat = SuratPermintaan::where('no_surat', $id)->lockForUpdate()->first();
 
-            if (!$surat) {
-                DB::rollBack();
-                return redirect()->back()->with('error', 'Data pengajuan SPP tidak ditemukan!');
-            }
-
-            $effectiveRole = ($currentRole === 'ADMIN') ? $surat->posisi_saat_ini : $currentRole;
-
-            if ($surat->posisi_saat_ini !== $effectiveRole) {
-                DB::rollBack();
-                return redirect()->back()->with('error', "WORKFLOW VIOLATION: Berkas ini sedang berada dalam otoritas [{$surat->posisi_saat_ini}], bukan di meja kerja Anda!");
-            }
-
-            $totalNominal = (string) $surat->total_nominal;
-            $status = $surat->status_surat;
-            $nextPosisi = $surat->posisi_saat_ini;
-
-            if ($request->aksi == 'approve') {
-                $kodeProject = $surat->kode_project ?? null;
-                $flowType = match (true) {
-                    in_array($kodeProject, ['38', '40'], true) => 'PROJECT_FLOW',
-                    in_array($kodeProject, ['01', '03', '07'], true) => 'PO_PK_TC_FLOW',
-                    in_array($kodeProject, ['02', '04', '06'], true) => 'BATRA_KLINIK_DIKLAT_FLOW',
-                    default => 'DEFAULT_FLOW',
-                };
-
-                if ($request->aksi === 'approve') {
-                    $nominalOver50M = bccomp($totalNominal, '50000000', 2) === 1;
-                    $nextMap = [];
-
-                    if ($flowType === 'PROJECT_FLOW') {
-                        $nextMap = [
-                            'AREA_MANAGER' => fn() => ['status' => 'Pending', 'next' => 'FINANCE_PROJECT'],
-                            'FINANCE_PROJECT' => fn() => ['status' => 'Pending', 'next' => 'PROJECT_MANAGER'],
-                            'PROJECT_MANAGER' => fn() => ['status' => 'Pending', 'next' => 'MANAGER_KEUANGAN'],
-                            'MANAGER_KEUANGAN' => fn() => $nominalOver50M
-                                ? ['status' => 'Pending Director Otorisasi', 'next' => 'DIREKTUR']
-                                : ['status' => 'Approved', 'next' => 'KASIR_PUSAT'],
-                            'DIREKTUR' => fn() => ['status' => 'Approved', 'next' => 'KASIR_PUSAT'],
-                        ];
-                    } elseif ($flowType === 'PO_PK_TC_FLOW') {
-                        $nextMap = [
-                            'KASIR_PUSAT' => fn() => ['status' => 'Pending', 'next' => 'KOORDINATOR_KEUANGAN'],
-                            'KOORDINATOR_KEUANGAN' => fn() => ['status' => 'Pending', 'next' => 'MANAGER_KEUANGAN'],
-                            'MANAGER_KEUANGAN' => fn() => $nominalOver50M
-                                ? ['status' => 'Pending Director Otorisasi', 'next' => 'DIREKTUR']
-                                : ['status' => 'Approved', 'next' => 'KASIR_PUSAT'],
-                            'DIREKTUR' => fn() => ['status' => 'Approved', 'next' => 'KASIR_PUSAT'],
-                            'KOORDINATOR_TC' => fn() => ['status' => 'Pending', 'next' => 'MANAGER_KEUANGAN'],
-                            'KOORDINATOR_PK' => fn() => ['status' => 'Pending', 'next' => 'MANAGER_KEUANGAN'],
-                        ];
-                    } elseif ($flowType === 'BATRA_KLINIK_DIKLAT_FLOW') {
-                        $nextMap = [
-                            'KASIR_PUSAT' => fn() => ['status' => 'Pending', 'next' => 'KOORDINATOR_BIDANG'],
-                            'KOORDINATOR_BIDANG' => fn() => ['status' => 'Pending', 'next' => 'MANAGER_PKP'],
-                            'MANAGER_PKP' => fn() => ['status' => 'Pending', 'next' => 'MANAGER_KEUANGAN'],
-                            'MANAGER_KEUANGAN' => fn() => $nominalOver50M
-                                ? ['status' => 'Pending Director Otorisasi', 'next' => 'DIREKTUR']
-                                : ['status' => 'Approved', 'next' => 'KASIR_PUSAT'],
-                            'DIREKTUR' => fn() => ['status' => 'Approved', 'next' => 'KASIR_PUSAT'],
-                            'KOORDINATOR_BATRA' => fn() => ['status' => 'Pending', 'next' => 'MANAGER_PKP'],
-                            'KOORDINATOR_KLINIK' => fn() => ['status' => 'Pending', 'next' => 'MANAGER_PKP'],
-                            'KOORDINATOR_DIKLAT' => fn() => ['status' => 'Pending', 'next' => 'MANAGER_PKP'],
-                        ];
-                    }
-
-                    $resolver = $nextMap[$effectiveRole] ?? null;
-                    if (!$resolver) {
-                        throw new \Exception("WORKFLOW UNMAPPED: Role {$effectiveRole} tidak punya transisi approve pada flow {$flowType}.");
-                    }
-
-                    $result = $resolver();
-                    $status = $result['status'];
-                    $nextPosisi = $result['next'];
-                } elseif ($request->aksi === 'revise') {
-                    $status = 'Revisi';
-                    $nextPosisi = 'MAKER';
-                } else {
-                    $status = 'Rejected';
-                    $nextPosisi = 'REJECTED';
+                if (!$surat) {
+                    throw new \Exception('Data pengajuan SPP tidak ditemukan!');
                 }
-            } else {
-                $status = $surat->status_surat;
-                $nextPosisi = $surat->posisi_saat_ini;
-            }
 
-            DB::table('surat_permintaan')
-                ->where('no_surat', $id)
-                ->where('posisi_saat_ini', $effectiveRole)
-                ->update([
-                    'status_surat' => $status,
-                    'posisi_saat_ini' => $nextPosisi,
+                $effectiveRole = ($currentRole === 'ADMIN') ? $surat->posisi_saat_ini : $currentRole;
+
+                if (!$this->workflowService->validateWorkflowTransition($surat, $effectiveRole)) {
+                    throw new \Exception("WORKFLOW VIOLATION: Berkas ini sedang berada dalam otoritas [{$surat->posisi_saat_ini}], bukan di meja kerja Anda!");
+                }
+
+                $totalNominal = (string) $surat->total_nominal;
+                $result = $this->workflowService->getNextPosition(
+                    $effectiveRole,
+                    $surat->kode_project,
+                    $totalNominal,
+                    $request->aksi
+                );
+
+                $surat->update([
+                    'status_surat' => $result['status'],
+                    'posisi_saat_ini' => $result['next'],
                     'keterangan_checker' => $request->alasan,
-                    'updated_at' => now()
+                    'updated_at' => now(),
                 ]);
 
-            if ($request->hasFile('file_checker')) {
-                foreach ($request->file('file_checker') as $file) {
-                    $namaFileAccess = 'checker_' . $id . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-                    $file->move(storage_path('app/private/lampiran_spp'), $namaFileAccess);
-
-                    DB::table('surat_permintaan_files')->insert([
-                        'no_surat' => $id,
-                        'nama_file' => $namaFileAccess,
-                        'kategori' => 'CHECKER',
-                    ]);
+                // File upload for checker
+                if ($request->hasFile('file_checker')) {
+                    $this->fileService->uploadSppAttachments(
+                        $request->file('file_checker'),
+                        $id,
+                        'CHECKER'
+                    );
                 }
-            }
 
-            $pesanLog = "User [{$currentRole}] mengeksekusi keputusan [{$request->aksi}] pada SPP No {$surat->no_surat}. Dokumen bermigrasi ke: [{$nextPosisi}] dengan status [{$status}].";
-            self::simpanLog('APPROVAL_TRANSACTION', $pesanLog, $surat);
+                // Audit log & history handled automatically by SppObserver
 
-            // Catat history approval SPP
-            DB::table('spp_history')->insert([
-                'no_surat' => $id,
-                'status_dari' => $surat->status_surat,
-                'status_ke' => $status,
-                'posisi_dari' => $surat->posisi_saat_ini,
-                'posisi_ke' => $nextPosisi,
-                'aktor_username' => Auth::user()->username,
-                'aktor_role' => $currentRole,
-                'keterangan' => $request->aksi . ($request->alasan ? ': ' . $request->alasan : ''),
-                'payload_before' => json_encode($surat),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+                // Send notifications
+                if (in_array($request->aksi, ['approve', 'revise'])) {
+                    $notifType = $request->aksi === 'approve'
+                        ? NotificationService::TYPE_PENDING_APPROVAL
+                        : NotificationService::TYPE_REVISED;
+                    $notifTitle = $request->aksi === 'approve' ? "Perlu Persetujuan - {$id}" : "Revisi - {$id}";
 
-            // Kirim notifikasi ke posisi selanjutnya
-            if (in_array($request->aksi, ['approve', 'revise'])) {
-                $notifType = $request->aksi === 'approve' ? NotificationService::TYPE_PENDING_APPROVAL : NotificationService::TYPE_REVISED;
-                $notifTitle = $request->aksi === 'approve' ? 'Perlu Persetujuan - ' . $id : 'Revisi - ' . $id;
-                $notifMsg = $request->aksi === 'approve'
-                    ? "SPP {$id} telah disetujui oleh {$currentRole}. Sekarang menunggu persetujuan {$nextPosisi}."
-                    : "SPP {$id} direvisi oleh {$currentRole}. Silakan perbaiki dan kirim ulang.";
-
-                if ($nextPosisi === 'MAKER' && $request->aksi === 'revise') {
-                    NotificationService::sendToUser($surat->id_maker, $notifType, $notifTitle, $notifMsg, 'SPP', $id);
-                } else {
-                    NotificationService::sendToRole($nextPosisi, $notifType, $notifTitle, $notifMsg, 'SPP', $id);
+                    if ($result['next'] === 'MAKER') {
+                        NotificationService::sendToUser(
+                            $surat->id_maker, $notifType, $notifTitle,
+                            "SPP {$id} direvisi oleh {$effectiveRole}. Silakan perbaiki dan kirim ulang.",
+                            'SPP', $id
+                        );
+                    } else {
+                        NotificationService::sendToRole(
+                            $result['next'], $notifType, $notifTitle,
+                            "SPP {$id} telah disetujui oleh {$effectiveRole}. Sekarang menunggu persetujuan {$result['next']}.",
+                            'SPP', $id
+                        );
+                    }
+                } elseif ($request->aksi === 'reject') {
+                    NotificationService::sendToUser(
+                        $surat->id_maker, NotificationService::TYPE_REJECTED,
+                        "Ditolak - {$id}",
+                        "SPP {$id} ditolak oleh {$effectiveRole}. Alasan: " . ($request->alasan ?? '-'),
+                        'SPP', $id
+                    );
                 }
-            } elseif ($request->aksi === 'reject') {
-                NotificationService::sendToUser($surat->id_maker, NotificationService::TYPE_REJECTED,
-                    'Ditolak - ' . $id,
-                    "SPP {$id} ditolak oleh {$currentRole}. Alasan: " . ($request->alasan ?? '-'),
-                    'SPP', $id);
-            }
 
-            DB::commit();
+                $feedbackSuccess = ($request->aksi == 'approve')
+                    ? "Pengajuan berhasil diproses! Aliran dokumen diteruskan ke: {$result['next']}."
+                    : "Pengajuan SPP resmi ditolak.";
 
-            $feedbackSuccess = ($request->aksi == 'approve')
-                ? "Pengajuan berhasil diproses! Aliran dokumen diteruskan ke: {$nextPosisi}."
-                : "Pengajuan SPP resmi ditolak.";
-
-            return redirect('/spp')->with('success', $feedbackSuccess);
-
+                return redirect('/spp')->with('success', $feedbackSuccess);
+            });
         } catch (\Exception $e) {
-            DB::rollBack();
             Log::error('SPP validasi failed', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'no_surat' => $id ?? null,
             ]);
-
-            return redirect()->back()->with('error', 'Gagal memproses validasi. Silakan coba kembali.');
+            return redirect()->back()->with('error', $e->getMessage() ?: 'Gagal memproses validasi. Silakan coba kembali.');
         }
     }
 
     // =========================================================================
     // 3. PROSES PENCUIRAN DANA FINAL (IDEMPOTENCY ENFORCED)
     // =========================================================================
-    public function cairkan(Request $request)
+    public function cairkan(DisburseSppRequest $request)
     {
-        if (session('role') != 'KASIR_PUSAT' && session('role') != 'ADMIN') {
-            abort(403, 'Akses Otoritas Ditolak.');
-        }
-
         $id = $request->input('no_surat');
-        if (!$id) {
-            return redirect()->back()->with('error', 'Nomor SPP tidak ditemukan untuk proses pencairan.');
-        }
-
-        DB::beginTransaction();
 
         try {
-            $surat = DB::table('surat_permintaan')
-                ->where('no_surat', $id)
-                ->where('status_surat', 'Approved')
-                ->where('posisi_saat_ini', 'KASIR_PUSAT')
-                ->lockForUpdate()
-                ->first();
+            return DB::transaction(function () use ($id) {
+                $surat = SuratPermintaan::where('no_surat', $id)
+                    ->where('status_surat', 'Approved')
+                    ->where('posisi_saat_ini', 'KASIR_PUSAT')
+                    ->lockForUpdate()
+                    ->first();
 
-            if (!$surat) {
-                DB::rollBack();
-                return redirect()->back()->with('error', '⚠️ PERINGATAN IDEMPOTENCY: Berkas ini sudah dicairkan sebelumnya atau status transaksi tidak valid!');
-            }
+                if (!$surat) {
+                    throw new \Exception('⚠️ PERINGATAN IDEMPOTENCY: Berkas ini sudah dicairkan sebelumnya atau status transaksi tidak valid!');
+                }
 
-            $items = DB::table('surat_permintaan_detail')
-                ->where('no_surat', $surat->no_surat)
-                ->get();
+                $items = DB::table('surat_permintaan_detail')
+                    ->where('no_surat', $surat->no_surat)
+                    ->get();
 
-            foreach ($items as $item) {
-                DB::table('master_budget')
-                    ->where('kode_budget', $item->kode_budget)
-                    ->increment('terserap', $item->nominal);
-            }
+                foreach ($items as $item) {
+                    DB::table('master_budget')
+                        ->where('kode_budget', $item->kode_budget)
+                        ->increment('terserap', $item->nominal);
+                }
 
-            DB::table('surat_permintaan')->where('no_surat', $id)->update([
-                'status_surat' => 'Disbursed',
-                'posisi_saat_ini' => 'FINISH',
-                'updated_at' => now()
-            ]);
+                $surat->update([
+                    'status_surat' => 'Disbursed',
+                    'posisi_saat_ini' => 'FINISH',
+                    'updated_at' => now(),
+                ]);
 
-            self::simpanLog('DISBURSED_FINAL', "Kasir Pusat resmi mencairkan dana transfer bank untuk SPP No {$surat->no_surat}", $surat);
+                // Audit log & history handled by SppObserver
 
-            // Catat history pencairan
-            DB::table('spp_history')->insert([
-                'no_surat' => $surat->no_surat,
-                'status_dari' => 'Approved',
-                'status_ke' => 'Disbursed',
-                'posisi_dari' => 'KASIR_PUSAT',
-                'posisi_ke' => 'FINISH',
-                'aktor_username' => Auth::user()->username,
-                'aktor_role' => session('role'),
-                'keterangan' => 'Pencairan dana oleh Kasir Pusat',
-                'payload_before' => json_encode($surat),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+                NotificationService::sendToUser(
+                    $surat->id_maker,
+                    NotificationService::TYPE_DISBURSED,
+                    "Pencairan - {$surat->no_surat}",
+                    "SPP {$surat->no_surat} telah dicairkan sebesar Rp " . number_format($surat->total_nominal, 0, ',', '.'),
+                    'SPP',
+                    $surat->no_surat
+                );
 
-            // Kirim notifikasi ke pembuat SPP
-            NotificationService::sendToUser($surat->id_maker, NotificationService::TYPE_DISBURSED,
-                'Pencairan - ' . $surat->no_surat,
-                "SPP {$surat->no_surat} telah dicairkan sebesar Rp " . number_format($surat->total_nominal, 0, ',', '.'),
-                'SPP', $surat->no_surat);
-
-            DB::commit();
-            return redirect('/spp')->with('success', "💵 Sukses! Dana SPP No {$surat->no_surat} telah resmi dicairkan dan saldo anggaran actual berhasil diperbarui!");
-
+                return redirect('/spp')->with('success', "💵 Sukses! Dana SPP No {$surat->no_surat} telah resmi dicairkan dan saldo anggaran actual berhasil diperbarui!");
+            });
         } catch (\Exception $e) {
-            DB::rollBack();
             Log::error('SPP cairkan failed', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'no_surat' => $id ?? null,
             ]);
-
-            return redirect()->back()->with('error', 'Gagal mencairkan dana. Silakan coba kembali.');
+            return redirect()->back()->with('error', $e->getMessage() ?: 'Gagal mencairkan dana. Silakan coba kembali.');
         }
     }
 
