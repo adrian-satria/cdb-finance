@@ -127,6 +127,23 @@ class SppNumberGeneratorService
     }
 
     /**
+     * Generate preview SPP number for display (no locking).
+     * Safe to use in GET requests.
+     *
+     * @param string $tanggal Date in Y-m-d format
+     * @return string Preview SPP number (may differ from actual on save)
+     */
+    public function generatePreviewNumber(string $tanggal): string
+    {
+        $tahun = (int) date('Y', strtotime($tanggal));
+        $bulanIndex = (int) date('n', strtotime($tanggal));
+        $bulanRomawi = $this->getRomanMonth($bulanIndex);
+        $nextSeq = $this->getNextSequence($tahun, $bulanIndex);
+
+        return $tahun . "/" . $bulanRomawi . "/SPP/PROJECT-X/" . str_pad($nextSeq, 3, '0', STR_PAD_LEFT);
+    }
+
+    /**
      * Validate SPP number format.
      *
      * @param string $noSurat

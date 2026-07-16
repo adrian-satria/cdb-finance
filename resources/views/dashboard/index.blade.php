@@ -120,7 +120,7 @@
         <div class="card-body p-4">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h6 class="fw-bold m-0"><i class="fa-solid fa-tasks me-2 text-primary"></i>My Tasks</h6>
-                <a href="/spp" class="btn btn-sm btn-outline-primary">Lihat Semua</a>
+                <x-button href="/spp" size="sm" type="outline-primary">Lihat Semua</x-button>
             </div>
             <div class="table-responsive">
                 <table class="table align-middle" style="font-size: 12.5px;">
@@ -138,15 +138,21 @@
                         @forelse($tasks as $s)
                         <tr>
                             <td><a href="javascript:void(0)" class="fw-bold text-dark text-decoration-none" onclick="showDetailSpp('{{ $s->no_surat }}')">{{ $s->no_surat }}</a></td>
-                            <td><span class="badge bg-light text-dark border">{{ $s->kode_project }}</span></td>
+                            <td><x-badge type="light">{{ $s->kode_project }}</x-badge></td>
                             <td>{{ $s->kode_area }}</td>
                             <td class="text-end fw-semibold">Rp {{ number_format($s->total_nominal, 0, ',', '.') }}</td>
                             <td class="text-center">
-                                <span class="badge bg-{{ $s->status_surat === 'Approved' ? 'success' : ($s->status_surat === 'Rejected' ? 'danger' : 'warning') }} bg-opacity-10 text-{{ $s->status_surat === 'Approved' ? 'success' : ($s->status_surat === 'Rejected' ? 'danger' : 'warning') }}">
-                                    {{ $s->status_surat }}
-                                </span>
+                                @php
+                                    $badgeType = match($s->status_surat) {
+                                        'Approved' => 'success',
+                                        'Rejected' => 'danger',
+                                        'Disbursed' => 'primary',
+                                        default => 'warning',
+                                    };
+                                @endphp
+                                <x-badge type="{{ $badgeType }}">{{ $s->status_surat }}</x-badge>
                             </td>
-                            <td class="text-center"><span class="badge bg-light text-dark border">{{ $s->posisi_saat_ini }}</span></td>
+                            <td class="text-center"><x-badge type="light">{{ $s->posisi_saat_ini }}</x-badge></td>
                         </tr>
                         @empty
                         <tr>

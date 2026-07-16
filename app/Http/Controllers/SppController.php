@@ -34,7 +34,7 @@ class SppController extends Controller
     // =========================================================================
     public function create()
     {
-        $nomor_baru = $this->numberService->generateNextNumber(now()->format('Y-m-d'));
+        $nomor_baru = $this->numberService->generatePreviewNumber(now()->format('Y-m-d'));
 
         $projects = Project::all();
         $master_budgets = DB::table('master_budget')->get()->groupBy('kode_project');

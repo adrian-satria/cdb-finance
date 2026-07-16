@@ -2,6 +2,7 @@
     'type' => 'primary',
     'size' => 'md',
     'icon' => '',
+    'href' => null,
 ])
 
 @php
@@ -25,9 +26,14 @@
     };
 @endphp
 
-<button {{ $attributes->merge(['type' => 'submit', 'class' => "$classes $sizeClasses"]) }}>
-    @if($icon)
-        <i class="{{ $icon }} me-1"></i>
-    @endif
-    {{ $slot }}
-</button>
+@if($href)
+    <a href="{{ $href }}" {{ $attributes->merge(['class' => "$classes $sizeClasses"]) }}>
+        @if($icon) <i class="{{ $icon }} me-1"></i> @endif
+        {{ $slot }}
+    </a>
+@else
+    <button {{ $attributes->merge(['type' => 'submit', 'class' => "$classes $sizeClasses"]) }}>
+        @if($icon) <i class="{{ $icon }} me-1"></i> @endif
+        {{ $slot }}
+    </button>
+@endif
