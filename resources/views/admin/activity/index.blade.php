@@ -8,7 +8,7 @@
 
     <div class="row g-3 mb-4">
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+            <div class="card card-bsmart">
                 <div class="card-body text-center py-3">
                     <div class="text-muted small">Total Aktivitas Hari Ini</div>
                     <div class="fw-bold fs-4 text-dark">{{ $todayStats->total ?? 0 }}</div>
@@ -16,7 +16,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+            <div class="card card-bsmart">
                 <div class="card-body text-center py-3">
                     <div class="text-muted small">User Aktif Hari Ini</div>
                     <div class="fw-bold fs-4 text-primary">{{ $todayStats->unique_users ?? 0 }}</div>
@@ -24,7 +24,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+            <div class="card card-bsmart">
                 <div class="card-body text-center py-3">
                     <div class="text-muted small">Total User Terdaftar</div>
                     <div class="fw-bold fs-4 text-success">{{ $activeUsers->count() }}</div>
@@ -33,7 +33,7 @@
         </div>
     </div>
 
-    <div class="card border-0 shadow-sm mb-4" style="border-radius: 16px;">
+    <div class="card card-bsmart mb-4">
         <div class="card-body p-4">
             <form method="GET" class="row g-3 align-items-end">
                 <div class="col-md-3">
@@ -67,18 +67,47 @@
         </div>
     </div>
 
-    <div class="card border-0 shadow-sm" style="border-radius: 16px;">
+    <div class="card card-bsmart">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table align-middle" style="font-size: 12px;">
-                    <thead style="background: #f8fafd;">
+                @php
+                    $sort = request('sort', 'created_at');
+                    $dir = request('direction', 'desc');
+                @endphp
+                <table class="table align-middle text-12">
+                    <thead class="bg-table-header">
                         <tr>
-                            <th class="border-0 py-3 px-4">Waktu</th>
-                            <th class="border-0 py-3">Username</th>
-                            <th class="border-0 py-3">Role</th>
-                            <th class="border-0 py-3">Aktivitas</th>
+                            <th class="border-0 py-3 px-4">
+                                <a href="{{ request()->fullUrlWithQuery(['sort' => 'created_at', 'direction' => ($sort === 'created_at' && $dir === 'asc') ? 'desc' : 'asc']) }}" class="sortable {{ $sort === 'created_at' ? 'sort-active' : '' }}">
+                                    Waktu
+                                    @if($sort === 'created_at')<span class="sort-indicator">{!! $dir === 'asc' ? '&#9650;' : '&#9660;' !!}</span>@endif
+                                </a>
+                            </th>
+                            <th class="border-0 py-3">
+                                <a href="{{ request()->fullUrlWithQuery(['sort' => 'username', 'direction' => ($sort === 'username' && $dir === 'asc') ? 'desc' : 'asc']) }}" class="sortable {{ $sort === 'username' ? 'sort-active' : '' }}">
+                                    Username
+                                    @if($sort === 'username')<span class="sort-indicator">{!! $dir === 'asc' ? '&#9650;' : '&#9660;' !!}</span>@endif
+                                </a>
+                            </th>
+                            <th class="border-0 py-3">
+                                <a href="{{ request()->fullUrlWithQuery(['sort' => 'role', 'direction' => ($sort === 'role' && $dir === 'asc') ? 'desc' : 'asc']) }}" class="sortable {{ $sort === 'role' ? 'sort-active' : '' }}">
+                                    Role
+                                    @if($sort === 'role')<span class="sort-indicator">{!! $dir === 'asc' ? '&#9650;' : '&#9660;' !!}</span>@endif
+                                </a>
+                            </th>
+                            <th class="border-0 py-3">
+                                <a href="{{ request()->fullUrlWithQuery(['sort' => 'aktivitas', 'direction' => ($sort === 'aktivitas' && $dir === 'asc') ? 'desc' : 'asc']) }}" class="sortable {{ $sort === 'aktivitas' ? 'sort-active' : '' }}">
+                                    Aktivitas
+                                    @if($sort === 'aktivitas')<span class="sort-indicator">{!! $dir === 'asc' ? '&#9650;' : '&#9660;' !!}</span>@endif
+                                </a>
+                            </th>
                             <th class="border-0 py-3">Deskripsi</th>
-                            <th class="text-center border-0 py-3">IP</th>
+                            <th class="text-center border-0 py-3">
+                                <a href="{{ request()->fullUrlWithQuery(['sort' => 'ip_address', 'direction' => ($sort === 'ip_address' && $dir === 'asc') ? 'desc' : 'asc']) }}" class="sortable {{ $sort === 'ip_address' ? 'sort-active' : '' }}">
+                                    IP
+                                    @if($sort === 'ip_address')<span class="sort-indicator">{!! $dir === 'asc' ? '&#9650;' : '&#9660;' !!}</span>@endif
+                                </a>
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
@@ -96,11 +125,7 @@
                             <td class="text-center"><code class="small text-secondary">{{ $a->ip_address }}</code></td>
                         </tr>
                         @empty
-                        <tr>
-                            <td colspan="6" class="text-center text-muted py-5">
-                                <i class="fa-solid fa-clock d-block fs-2 mb-2"></i>Belum ada aktivitas tercatat.
-                            </td>
-                        </tr>
+                        <x-empty-state colspan="6" icon="fa-solid fa-clock" title="Belum ada aktivitas tercatat." />
                         @endforelse
                     </tbody>
                 </table>

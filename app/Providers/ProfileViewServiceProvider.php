@@ -10,4 +10,3 @@ class ProfileViewServiceProvider extends ServiceProvider
 
     public function boot(): void {}
 }
-

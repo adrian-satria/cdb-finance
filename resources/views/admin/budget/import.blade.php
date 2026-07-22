@@ -38,7 +38,7 @@
         </div>
     @endif
 
-    <div class="card shadow-sm border-0">
+    <div class="card card-bsmart">
         <div class="card-body p-4">
             <div class="mb-4">
                 <div class="fw-semibold text-secondary small mb-2">Format file CSV</div>
@@ -59,7 +59,7 @@
                 </div>
             </div>
 
-            <form action="{{ route('admin.budget.import') }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ route('admin.budget.import') }}" method="POST" enctype="multipart/form-data" data-loading>
                 @csrf
 
                 <div class="mb-3">

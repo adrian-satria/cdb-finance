@@ -9,22 +9,51 @@
         <p class="text-muted small m-0 mt-1">Rekam jejak aktivitas digital user, manipulasi data transaksi keuangan, dan log otorisasi sistem B-SMART.</p>
     </div>
 
-    <div class="card border-0 shadow-sm" style="border-radius: 16px; background: #ffffff;">
+    <div class="card card-bsmart">
         <div class="card-body p-4">
             <div class="table-responsive">
-                <table class="table align-middle" style="border-color: #f1f3f4;">
-                    <thead style="background: #f8fafd; color: #5f6368; font-size: 13px;">
+                @php
+                    $sort = request('sort', 'created_at');
+                    $dir = request('direction', 'desc');
+                @endphp
+                <table class="table align-middle border-light-table">
+                    <thead class="bg-table-header text-13">
                         <tr>
                             <th width="5%" class="text-center border-0 py-3">No</th>
-                            <th width="15%" class="border-0 py-3">Waktu Kejadian</th>
-                            <th width="12%" class="border-0 py-3">Username</th>
-                            <th width="10%" class="border-0 py-3">Role Akses</th>
-                            <th width="15%" class="border-0 py-3">Kategori Aksi</th>
+                            <th width="15%" class="border-0 py-3">
+                                <a href="{{ request()->fullUrlWithQuery(['sort' => 'created_at', 'direction' => ($sort === 'created_at' && $dir === 'asc') ? 'desc' : 'asc']) }}" class="sortable {{ $sort === 'created_at' ? 'sort-active' : '' }}">
+                                    Waktu Kejadian
+                                    @if($sort === 'created_at')<span class="sort-indicator">{!! $dir === 'asc' ? '&#9650;' : '&#9660;' !!}</span>@endif
+                                </a>
+                            </th>
+                            <th width="12%" class="border-0 py-3">
+                                <a href="{{ request()->fullUrlWithQuery(['sort' => 'username', 'direction' => ($sort === 'username' && $dir === 'asc') ? 'desc' : 'asc']) }}" class="sortable {{ $sort === 'username' ? 'sort-active' : '' }}">
+                                    Username
+                                    @if($sort === 'username')<span class="sort-indicator">{!! $dir === 'asc' ? '&#9650;' : '&#9660;' !!}</span>@endif
+                                </a>
+                            </th>
+                            <th width="10%" class="border-0 py-3">
+                                <a href="{{ request()->fullUrlWithQuery(['sort' => 'role', 'direction' => ($sort === 'role' && $dir === 'asc') ? 'desc' : 'asc']) }}" class="sortable {{ $sort === 'role' ? 'sort-active' : '' }}">
+                                    Role Akses
+                                    @if($sort === 'role')<span class="sort-indicator">{!! $dir === 'asc' ? '&#9650;' : '&#9660;' !!}</span>@endif
+                                </a>
+                            </th>
+                            <th width="15%" class="border-0 py-3">
+                                <a href="{{ request()->fullUrlWithQuery(['sort' => 'aksi', 'direction' => ($sort === 'aksi' && $dir === 'asc') ? 'desc' : 'asc']) }}" class="sortable {{ $sort === 'aksi' ? 'sort-active' : '' }}">
+                                    Kategori Aksi
+                                    @if($sort === 'aksi')<span class="sort-indicator">{!! $dir === 'asc' ? '&#9650;' : '&#9660;' !!}</span>@endif
+                                </a>
+                            </th>
                             <th width="33%" class="border-0 py-3">Deskripsi Kronologi</th>
-                            <th width="10%" class="text-center border-0 py-3">IP Address</th>
+                            <th width="10%" class="text-center border-0 py-3">
+                                <a href="{{ request()->fullUrlWithQuery(['sort' => 'ip_address', 'direction' => ($sort === 'ip_address' && $dir === 'asc') ? 'desc' : 'asc']) }}" class="sortable {{ $sort === 'ip_address' ? 'sort-active' : '' }}">
+                                    IP Address
+                                    @if($sort === 'ip_address')<span class="sort-indicator">{!! $dir === 'asc' ? '&#9650;' : '&#9660;' !!}</span>@endif
+                                </a>
+                            </th>
                         </tr>
                     </thead>
-                    <tbody style="font-size: 13.5px;">
+                    <tbody class="text-13">
                         @forelse($logs as $index => $log)
                         <tr style="border-bottom: 1px solid #f1f3f4;">
                             <td class="text-center fw-semibold text-secondary py-3">{{ $logs->firstItem() + $index }}</td>
@@ -52,11 +81,7 @@
                             <td class="text-center text-muted"><code class="small text-secondary">{{ $log->ip_address }}</code></td>
                         </tr>
                         @empty
-                        <tr>
-                            <td colspan="7" class="text-center text-muted py-5" style="background: #ffffff;">
-                                <i class="fa-solid fa-clock-rotate-left d-block fs-2 mb-2 text-black-50"></i> Belum ada rekaman log aktivitas sistem.
-                            </td>
-                        </tr>
+                        <x-empty-state colspan="7" icon="fa-solid fa-clock-rotate-left" title="Belum ada rekaman log aktivitas sistem." />
                         @endforelse
                     </tbody>
                 </table>

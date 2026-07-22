@@ -3,12 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
 
 class MasterBudget extends Model
 {
     protected $table = 'master_budget';
+
     protected $primaryKey = 'id_budget';
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -54,12 +55,14 @@ class MasterBudget extends Model
         if ((float) $this->alokasi_dana <= 0) {
             return 0;
         }
+
         return round(((float) $this->terserap / (float) $this->alokasi_dana) * 100, 2);
     }
 
     public function hasAvailableFunds(string $amount): bool
     {
         $remaining = $this->remaining_budget;
+
         return bccomp($amount, $remaining, 2) !== 1;
     }
 

@@ -18,11 +18,10 @@
         </div>
     @endif
 
-    <div class="card border-0 shadow-sm" style="border-radius: 16px; background: #ffffff;">
-        <!-- Page Header inside card, ABOVE filter form -->
+    <div class="card card-bsmart">
         <div class="card-header bg-transparent border-0 d-flex flex-wrap justify-content-between align-items-center px-4 pt-4 pb-0">
             <div>
-                <h4 class="fw-bold text-dark m-0"><i class="fa-solid fa-table-list text-primary me-2"></i>Daftar Data SPP</h4>
+                <h4 class="fw-bold text-dark m-0"><i class="fa-solid fa-table-list text-primary me-2"></i>Data SPP</h4>
                 <p class="text-muted small m-0 mt-1">Riwayat pengajuan Surat Permintaan Pembayaran.</p>
             </div>
             <a href="/spp/tambah" class="btn btn-primary btn-sm px-3 mt-2 mt-md-0">
@@ -31,7 +30,7 @@
         </div>
 
         <div class="card-body p-4">
-            <!-- Filter form below header -->
+            @isset($projects)
             <div class="row align-items-center mb-4">
                 <div class="col-12">
                     <form action="/spp" method="GET" class="row g-2 align-items-end">
@@ -55,29 +54,64 @@
                     </form>
                 </div>
             </div>
+            @endisset
 
+            @php
+                $sort = request('sort', 'created_at');
+                $dir = request('direction', 'desc');
+            @endphp
             <div class="table-responsive">
-                <table class="table align-middle" style="border-color: #f1f3f4;">
-                    <thead style="background: #f8fafd; color: #5f6368; font-size: 12.5px; font-weight: 600;">
+                <table class="table align-middle table-bsmart">
+                    <thead>
                         <tr>
                             <th width="4%" class="text-center border-0 py-3">No</th>
-                            <th width="14%" class="border-0 py-3">No. Surat</th>
-                            <th width="10%" class="border-0 py-3">Project</th>
-                            <th width="11%" class="border-0 py-3">Tanggal</th>
-                            <th width="10%" class="border-0 py-3">Unit / Area</th>
-                            <th width="18%" class="border-0 py-3">Lampiran Berkas Secured</th> 
-                            <th width="14%" class="border-0 py-3">Total Nominal</th>
-                            <th width="11%" class="text-center border-0 py-3">Status</th>
+                            <th width="14%" class="border-0 py-3">
+                                <a href="{{ request()->fullUrlWithQuery(['sort' => 'no_surat', 'direction' => ($sort === 'no_surat' && $dir === 'asc') ? 'desc' : 'asc']) }}" class="sortable {{ $sort === 'no_surat' ? 'sort-active' : '' }}">
+                                    No. Surat
+                                    @if($sort === 'no_surat')<span class="sort-indicator">{!! $dir === 'asc' ? '&#9650;' : '&#9660;' !!}</span>@endif
+                                </a>
+                            </th>
+                            <th width="10%" class="border-0 py-3" title="Kode program / project">
+                                <a href="{{ request()->fullUrlWithQuery(['sort' => 'kode_project', 'direction' => ($sort === 'kode_project' && $dir === 'asc') ? 'desc' : 'asc']) }}" class="sortable {{ $sort === 'kode_project' ? 'sort-active' : '' }}">
+                                    Project
+                                    @if($sort === 'kode_project')<span class="sort-indicator">{!! $dir === 'asc' ? '&#9650;' : '&#9660;' !!}</span>@endif
+                                </a>
+                            </th>
+                            <th width="11%" class="border-0 py-3">
+                                <a href="{{ request()->fullUrlWithQuery(['sort' => 'tanggal', 'direction' => ($sort === 'tanggal' && $dir === 'asc') ? 'desc' : 'asc']) }}" class="sortable {{ $sort === 'tanggal' ? 'sort-active' : '' }}">
+                                    Tanggal
+                                    @if($sort === 'tanggal')<span class="sort-indicator">{!! $dir === 'asc' ? '&#9650;' : '&#9660;' !!}</span>@endif
+                                </a>
+                            </th>
+                            <th width="10%" class="border-0 py-3" title="Unit kerja pengaju">
+                                <a href="{{ request()->fullUrlWithQuery(['sort' => 'kode_area', 'direction' => ($sort === 'kode_area' && $dir === 'asc') ? 'desc' : 'asc']) }}" class="sortable {{ $sort === 'kode_area' ? 'sort-active' : '' }}">
+                                    Unit / Area
+                                    @if($sort === 'kode_area')<span class="sort-indicator">{!! $dir === 'asc' ? '&#9650;' : '&#9660;' !!}</span>@endif
+                                </a>
+                            </th>
+                            <th width="18%" class="border-0 py-3" title="Dokumen lampiran pendukung">Lampiran Berkas</th>
+                            <th width="14%" class="border-0 py-3" title="Total dana yang diajukan">
+                                <a href="{{ request()->fullUrlWithQuery(['sort' => 'total_nominal', 'direction' => ($sort === 'total_nominal' && $dir === 'asc') ? 'desc' : 'asc']) }}" class="sortable {{ $sort === 'total_nominal' ? 'sort-active' : '' }}">
+                                    Total Nominal
+                                    @if($sort === 'total_nominal')<span class="sort-indicator">{!! $dir === 'asc' ? '&#9650;' : '&#9660;' !!}</span>@endif
+                                </a>
+                            </th>
+                            <th width="11%" class="text-center border-0 py-3" title="Tahap persetujuan saat ini">
+                                <a href="{{ request()->fullUrlWithQuery(['sort' => 'status_surat', 'direction' => ($sort === 'status_surat' && $dir === 'asc') ? 'desc' : 'asc']) }}" class="sortable {{ $sort === 'status_surat' ? 'sort-active' : '' }}">
+                                    Status
+                                    @if($sort === 'status_surat')<span class="sort-indicator">{!! $dir === 'asc' ? '&#9650;' : '&#9660;' !!}</span>@endif
+                                </a>
+                            </th>
                             <th width="13%" class="text-center border-0 py-3">Aksi</th>
                         </tr>
                     </thead>
-                    <tbody style="font-size: 13px; color: #3c4043;">
+                    <tbody>
                         @forelse($data as $index => $s)
                         <tr style="border-bottom: 1px solid #f1f3f4;">
                             <td class="text-center fw-semibold text-secondary py-3">{{ $data->firstItem() + $index }}</td>              
                             
                             <td>
-                                <a href="javascript:void(0)" class="fw-bold text-dark text-decoration-none hover-primary" onclick="showDetailSpp('{{ $s->no_surat }}')" title="Klik untuk lihat rincian anggaran">
+                                <a href="javascript:void(0)" class="fw-bold text-dark text-decoration-none hover-primary" data-action="detail-spp" data-no-surat="{{ $s->no_surat }}" title="Klik untuk lihat rincian anggaran">
                                     {{ $s->no_surat }} <i class="fa-solid fa-arrow-up-right-from-square ms-1 text-muted" style="font-size: 10px;"></i>
                                 </a>
                             </td>                         
@@ -133,18 +167,14 @@
                                 <div class="d-inline-flex gap-1 align-items-center">
                                     
                                     @if(session('role') == $s->posisi_saat_ini && str_contains($s->status_surat, 'Pending'))
-                                        <button type="button" class="btn btn-sm btn-outline-primary px-3 rounded-pill" style="font-size: 11.5px; font-weight: 500;" onclick="bukaModalValidasi('{{ $s->no_surat }}', '{{ $s->no_surat }}', '{{ number_format($s->total_nominal, 0, ',', '.') }}')">
+                                        <button type="button" class="btn btn-sm btn-outline-primary px-3 rounded-pill" style="font-size: 11.5px; font-weight: 500;" data-action="validasi-spp" data-no-surat="{{ $s->no_surat }}" data-total-nominal="{{ $s->total_nominal }}">
                                             <i class="fa-solid fa-user-check me-1"></i> Periksa
                                         </button>
                                     
                                     @elseif(session('role') == 'KASIR_PUSAT' && $s->status_surat == 'Approved' && $s->posisi_saat_ini == 'KASIR_PUSAT')
-                                        <form action="/spp/cairkan" method="POST" onsubmit="return confirm('Apakah Anda yakin dana untuk surat {{ $s->no_surat }} ini sudah ditransfer via e-banking dan ingin mencairkannya di sistem?')">
-                                            @csrf
-                                            <input type="hidden" name="no_surat" value="{{ $s->no_surat }}" />
-                                            <button type="submit" class="btn btn-sm btn-success px-3 rounded-pill" style="font-size: 11.5px; font-weight: 600;">
-                                                <i class="fa-solid fa-money-bill-transfer me-1"></i> Cairkan Dana
-                                            </button>
-                                        </form>
+                                        <button type="button" class="btn btn-sm btn-success px-3 rounded-pill" style="font-size: 11.5px; font-weight: 600;" data-action="cairkan-spp" data-no-surat="{{ $s->no_surat }}" data-total-nominal="{{ $s->total_nominal }}">
+                                            <i class="fa-solid fa-money-bill-transfer me-1"></i> Cairkan Dana
+                                        </button>
                                     @else
                                         <span class="text-muted small" style="font-style: italic;">
                                             @if($s->status_surat == 'Disbursed')
@@ -158,10 +188,10 @@
                                     @if($s->status_surat == 'Approved' || $s->status_surat == 'Disbursed')
                                         @php $canPrint = in_array(session('role'), ['ADMIN', 'MANAGER_KEUANGAN'], true) || session('role') === 'DIREKTUR'; @endphp
                                         @if($canPrint)
-                                            <button type="button" class="btn btn-sm btn-outline-secondary border text-secondary px-2.5 rounded-pill ms-1" style="font-size: 11.5px;" title="Preview Hasil Cetak SPP" onclick="showPreviewSpp('{{ $s->no_surat }}')">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary btn-icon-circle" title="Preview Hasil Cetak SPP" data-action="preview-spp" data-no-surat="{{ $s->no_surat }}">
                                                 <i class="fa-solid fa-eye"></i>
                                             </button>
-                                            <a href="/spp/cetak?no_surat={{ rawurlencode($s->no_surat) }}" target="_blank" class="btn btn-sm btn-light border text-secondary px-2.5 rounded-pill ms-1" style="font-size: 11.5px;" title="Cetak Bukti Dokumen PDF SPP">
+                                            <a href="/spp/cetak?no_surat={{ rawurlencode($s->no_surat) }}" target="_blank" class="btn btn-sm btn-outline-secondary btn-icon-circle" title="Cetak Bukti Dokumen PDF SPP">
                                                 <i class="fa-solid fa-print"></i>
                                             </a>
                                         @endif
@@ -171,11 +201,7 @@
                             </td>
                         </tr>
                         @empty
-                        <tr>
-                            <td colspan="9" class="text-center text-muted py-5" style="background: #ffffff;">
-                                <i class="fa-solid fa-folder-open d-block fs-2 mb-2 text-black-50"></i> Belum ada pengajuan dana SPP di dalam database.
-                            </td>
-                        </tr>
+                        <x-empty-state colspan="9" title="Belum Ada Data" message="Belum ada pengajuan SPP yang tersedia." />
                         @endforelse
                     </tbody>
                 </table>
@@ -195,72 +221,7 @@
 
 @push('scripts')
 <script>
-
-    function showDetailSpp(noSurat) {
-        document.getElementById('detailNoSurat').innerText = "Rincian Item: " + noSurat;
-        
-        document.getElementById('loadingRow').style.display = 'table-row-group';
-        document.getElementById('detailItemsBody').innerHTML = '';
-        document.getElementById('detailTotalNominal').innerText = 'Rp 0';
-        
-        var myModal = new bootstrap.Modal(document.getElementById('modalDetailSpp'));
-        myModal.show();
-
-        let urlSafeNoSurat = encodeURIComponent(noSurat);
-
-        fetch('/spp/detail-items?no_surat=' + urlSafeNoSurat)
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('loadingRow').style.display = 'none';
-                
-                let htmlRows = '';
-                let grandTotal = 0;
-
-                if (data.length === 0) {
-                    htmlRows = `<tr><td colspan="4" class="text-center text-muted py-4">Tidak ada item rincian dana untuk surat ini.</td></tr>`;
-                } else {
-                    data.forEach((item, index) => {
-                        let nominalBelanja = parseFloat(item.nominal ?? 0);
-                        grandTotal += nominalBelanja;
-
-                        htmlRows += `
-                            <tr style="border-bottom: 1px solid #f1f3f4;">
-                                <td class="text-center text-secondary fw-semibold py-2.5">${index + 1}</td>
-                                <td>
-                                    <span class="fw-semibold text-dark d-block">${item.kode_budget}</span>
-                                    <small class="text-muted" style="font-size: 11px;">${item.nama_budget ?? 'Komponen Anggaran'}</small>
-                                </td>
-                                <td class="text-secondary">${item.keterangan ?? '-'}</td>
-                                <td class="text-end fw-bold text-dark">Rp ${nominalBelanja.toLocaleString('id-ID')}</td>
-                            </tr>
-                        `;
-                    });
-                }
-
-                document.getElementById('detailItemsBody').innerHTML = htmlRows;
-                document.getElementById('detailTotalNominal').innerText = 'Rp ' + grandTotal.toLocaleString('id-ID');
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                document.getElementById('loadingRow').style.display = 'none';
-                document.getElementById('detailItemsBody').innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">Gagal memuat rincian data dari server.</td></tr>`;
-            });
-    }
-
-    function showPreviewSpp(noSurat) {
-        document.getElementById('previewSuratLabel').innerText = "No. Surat: " + noSurat;
-        document.getElementById('previewFrame').src = '/spp/preview-cetak?no_surat=' + encodeURIComponent(noSurat);
-        document.getElementById('previewPrintLink').href = '/spp/cetak?no_surat=' + encodeURIComponent(noSurat);
-        document.getElementById('previewLoading').style.display = 'flex';
-
-        var previewFrame = document.getElementById('previewFrame');
-        previewFrame.onload = function() {
-            document.getElementById('previewLoading').style.display = 'none';
-        };
-
-        var myModal = new bootstrap.Modal(document.getElementById('modalPreviewSpp'));
-        myModal.show();
-    }
+    // Functions provided by resources/js/modules/spp.js (exposed on window)
 </script>
 @endpush
 @endsection

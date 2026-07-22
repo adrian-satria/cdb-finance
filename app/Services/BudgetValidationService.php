@@ -2,16 +2,17 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\DB;
+use App\ValueObjects\ValidationResult;
 use Exception;
+use Illuminate\Support\Facades\DB;
 
 class BudgetValidationService
 {
     /**
      * Validate if budget ceiling can accommodate the requested amount.
      *
-     * @param string $kodeBudget Budget code to validate
-     * @param string $jumlah Amount requested (string for bcmath precision)
+     * @param  string  $kodeBudget  Budget code to validate
+     * @param  string  $jumlah  Amount requested (string for bcmath precision)
      * @return ValidationResult Validation result
      */
     public function validateBudgetCeiling(string $kodeBudget, string $jumlah): ValidationResult
@@ -22,14 +23,14 @@ class BudgetValidationService
                 ->lockForUpdate()
                 ->first();
 
-            if (!$budget) {
+            if (! $budget) {
                 return $this->failure(
                     "Kode Budget [{$kodeBudget}] tidak ditemukan di sistem master!",
                     ['kode_budget' => $kodeBudget]
                 );
             }
 
-            $sisaSaldo = bcsub((string)$budget->alokasi_dana, (string)$budget->terserap, 2);
+            $sisaSaldo = bcsub((string) $budget->alokasi_dana, (string) $budget->terserap, 2);
 
             if (bccomp($jumlah, $sisaSaldo, 2) === 1) {
                 $namaBudget = $budget->nama_budget ?? $kodeBudget;
@@ -57,7 +58,7 @@ class BudgetValidationService
 
         } catch (Exception $e) {
             return $this->failure(
-                "Error validating budget: " . $e->getMessage(),
+                'Error validating budget: '.$e->getMessage(),
                 ['exception' => $e->getMessage()]
             );
         }
@@ -66,31 +67,26 @@ class BudgetValidationService
     /**
      * Validate multiple budget items at once.
      *
-     * @param array $items Array of items with 'kode_budget' and 'jumlah'
+     * @param  array  $items  Array of items with 'kode_budget' and 'jumlah'
      * @return ValidationResult Validation result
      */
     public function lockAndValidateMultiple(array $items): ValidationResult
     {
-        DB::beginTransaction();
-
         try {
             $totalNominal = '0';
 
             foreach ($items as $item) {
                 $kodeBudget = $item['kode_budget'];
-                $jumlah = (string)$item['jumlah'];
+                $jumlah = (string) $item['jumlah'];
 
                 $validation = $this->validateBudgetCeiling($kodeBudget, $jumlah);
 
-                if (!$validation->isValid) {
-                    DB::rollBack();
+                if (! $validation->isValid) {
                     return $validation;
                 }
 
                 $totalNominal = bcadd($totalNominal, $jumlah, 2);
             }
-
-            DB::commit();
 
             return $this->success([
                 'total_items' => count($items),
@@ -98,9 +94,8 @@ class BudgetValidationService
             ]);
 
         } catch (Exception $e) {
-            DB::rollBack();
             return $this->failure(
-                "Error validating multiple items: " . $e->getMessage(),
+                'Error validating multiple items: '.$e->getMessage(),
                 ['exception' => $e->getMessage()]
             );
         }
@@ -112,11 +107,11 @@ class BudgetValidationService
             ->where('kode_budget', $kodeBudget)
             ->first();
 
-        if (!$budget) {
+        if (! $budget) {
             return '0';
         }
 
-        return bcsub((string)$budget->alokasi_dana, (string)$budget->terserap, 2);
+        return bcsub((string) $budget->alokasi_dana, (string) $budget->terserap, 2);
     }
 
     public function budgetExists(string $kodeBudget): bool
@@ -136,6 +131,7 @@ class BudgetValidationService
     public function isWithinBudget(string $kodeBudget, string $jumlah): bool
     {
         $remaining = $this->calculateRemainingBudget($kodeBudget);
+
         return bccomp($jumlah, $remaining, 2) !== 1;
     }
 
@@ -148,13 +144,4 @@ class BudgetValidationService
     {
         return new ValidationResult(false, $message, $details);
     }
-}
-
-class ValidationResult
-{
-    public function __construct(
-        public bool $isValid,
-        public ?string $errorMessage = null,
-        public ?array $details = null,
-    ) {}
 }

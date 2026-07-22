@@ -6,12 +6,12 @@
 <div class="container py-4">
     <div class="row justify-content-center">
         <div class="col-md-7">
-            <div class="card shadow-sm border-0" style="border-radius: var(--radius-lg);">
-                <div class="card-header bg-white py-3 border-light">
+            <div class="card card-bsmart">
+                <div class="card-header bg-white py-3 border-0">
                     <h5 class="fw-bold text-primary m-0"><i class="fa-solid fa-user-gear me-2"></i>Ubah Profil Pengguna</h5>
                 </div>
                 <div class="card-body p-4">
-                    <form action="/admin/user/{{ $user->id_user }}/update" method="POST">
+                    <form action="/admin/user/{{ $user->id_user }}/update" method="POST" data-loading>
                         @csrf
                         @method('PUT')
                         

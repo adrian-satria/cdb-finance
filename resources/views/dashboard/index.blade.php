@@ -1,7 +1,5 @@
 @extends('layouts.app')
-@push('styles')
-@vite(['resources/css/dashboard.css'])
-@endpush
+
 @section('title', 'Dashboard | B-SMART')
 @section('content')
 <div class="container-fluid py-4">
@@ -40,11 +38,11 @@
     </form>
     @endif
 
-    {{-- Financial Summary Cards --}}
-    @if(isset($totalBudget))
+    {{-- Financial Summary Cards (Admin only) --}}
+    @if(session('role') === 'ADMIN' && isset($totalBudget))
     <div class="row g-3 mb-4">
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm" style="border-radius: 14px; border-left: 4px solid #2563eb !important;">
+            <div class="card card-stat shadow-sm" style="border-left-color: #2563eb;">
                 <div class="card-body">
                     <p class="text-muted small mb-1">Total Budget</p>
                     <h5 class="fw-bold text-primary m-0">Rp {{ number_format($totalBudget, 0, ',', '.') }}</h5>
@@ -52,7 +50,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm" style="border-radius: 14px; border-left: 4px solid #10b981 !important;">
+            <div class="card card-stat shadow-sm" style="border-left-color: #10b981;">
                 <div class="card-body">
                     <p class="text-muted small mb-1">Terserap</p>
                     <h5 class="fw-bold text-success m-0">Rp {{ number_format($totalTerserap, 0, ',', '.') }}</h5>
@@ -60,7 +58,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm" style="border-radius: 14px; border-left: 4px solid #f59e0b !important;">
+            <div class="card card-stat shadow-sm" style="border-left-color: #f59e0b;">
                 <div class="card-body">
                     <p class="text-muted small mb-1">Sisa Budget</p>
                     <h5 class="fw-bold text-warning m-0">Rp {{ number_format($sisaBudget, 0, ',', '.') }}</h5>
@@ -68,7 +66,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm" style="border-radius: 14px; border-left: 4px solid {{ $persenUtilisasi > 90 ? '#ef4444' : '#06b6d4' }} !important;">
+            <div class="card card-stat shadow-sm" style="border-left-color: {{ $persenUtilisasi > 90 ? '#ef4444' : '#06b6d4' }};">
                 <div class="card-body">
                     <p class="text-muted small mb-1">Utilisasi</p>
                     <h5 class="fw-bold m-0 {{ $persenUtilisasi > 90 ? 'text-danger' : 'text-info' }}">
@@ -82,7 +80,7 @@
     @endif
 
     {{-- Critical Budget Alert (Admin only) --}}
-    @if(isset($criticalBudgets) && $criticalBudgets->isNotEmpty())
+    @if(session('role') === 'ADMIN' && isset($criticalBudgets) && $criticalBudgets->isNotEmpty())
     <div class="alert alert-danger border-0 shadow-sm mb-4 d-flex align-items-center gap-2">
         <i class="fa-solid fa-triangle-exclamation fs-5"></i>
         <div>
@@ -94,10 +92,10 @@
     </div>
     @endif
 
-    {{-- Stat Cards --}}
+    {{-- Stat Cards (semua role) --}}
     <div class="row g-3 mb-4">
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm" style="border-radius: 14px; border-left: 4px solid #f59e0b !important;">
+            <div class="card card-stat shadow-sm" style="border-left-color: #f59e0b;">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
@@ -112,7 +110,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm" style="border-radius: 14px; border-left: 4px solid #10b981 !important;">
+            <div class="card card-stat shadow-sm" style="border-left-color: #10b981;">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
@@ -127,7 +125,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm" style="border-radius: 14px; border-left: 4px solid #ef4444 !important;">
+            <div class="card card-stat shadow-sm" style="border-left-color: #ef4444;">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
@@ -142,11 +140,11 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm" style="border-radius: 14px; border-left: 4px solid #06b6d4 !important;">
+            <div class="card card-stat shadow-sm" style="border-left-color: #06b6d4;">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <p class="text-muted small mb-1">Total Disbursed</p>
+                            <p class="text-muted small mb-1">Disbursed</p>
                             <h3 class="fw-bold text-info m-0">{{ $countDisbursed ?? 0 }}</h3>
                         </div>
                         <div class="rounded-circle bg-info-subtle p-3" style="width: 50px; height: 50px;">
@@ -159,8 +157,8 @@
     </div>
 
     {{-- Budget per Project Progress Bars (Admin only) --}}
-    @if(isset($budgetPerProject) && $budgetPerProject->isNotEmpty())
-    <div class="card border-0 shadow-sm mb-4" style="border-radius: 14px;">
+    @if(session('role') === 'ADMIN' && isset($budgetPerProject) && $budgetPerProject->isNotEmpty())
+    <div class="card card-bsmart mb-4">
         <div class="card-body p-4">
             <h6 class="fw-bold mb-3"><i class="fa-solid fa-chart-simple me-2 text-primary"></i>Budget vs Actual per Project</h6>
             @foreach($budgetPerProject as $b)
@@ -190,9 +188,9 @@
     </div>
     @endif
 
-    {{-- Monthly Chart --}}
-    @if(isset($monthlyChart) && $monthlyChart->isNotEmpty())
-    <div class="card border-0 shadow-sm mb-4" style="border-radius: 14px;">
+    {{-- Monthly Chart (Admin only) --}}
+    @if(session('role') === 'ADMIN' && isset($monthlyChart) && $monthlyChart->isNotEmpty())
+    <div class="card card-bsmart mb-4">
         <div class="card-body p-4">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h6 class="fw-bold m-0"><i class="fa-solid fa-chart-line me-2 text-success"></i>Tren Pengajuan Bulanan ({{ date('Y') }})</h6>
@@ -206,7 +204,7 @@
     @endif
 
     {{-- My Tasks --}}
-    <div class="card border-0 shadow-sm" style="border-radius: 14px;">
+    <div class="card card-bsmart">
         <div class="card-body p-4">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h6 class="fw-bold m-0"><i class="fa-solid fa-tasks me-2 text-primary"></i>My Tasks</h6>
@@ -245,12 +243,7 @@
                             <td class="text-center"><x-badge type="light">{{ $s->posisi_saat_ini }}</x-badge></td>
                         </tr>
                         @empty
-                        <tr>
-                            <td colspan="6" class="text-center text-muted py-4">
-                                <i class="fa-regular fa-circle-check d-block fs-3 mb-2"></i>
-                                Tidak ada task yang perlu ditindaklanjuti.
-                            </td>
-                        </tr>
+                        <x-empty-state colspan="6" icon="fa-regular fa-circle-check" title="Tidak ada task yang perlu ditindaklanjuti." />
                         @endforelse
                     </tbody>
                 </table>
@@ -313,30 +306,7 @@
         });
     }
 
-    function showDetailSpp(noSurat) {
-        document.getElementById('detailNoSurat').innerText = "Rincian Item: " + noSurat;
-        document.getElementById('loadingRow').style.display = 'table-row-group';
-        document.getElementById('detailItemsBody').innerHTML = '';
-        document.getElementById('detailTotalNominal').innerText = 'Rp 0';
-        var myModal = new bootstrap.Modal(document.getElementById('modalDetailSpp'));
-        myModal.show();
-        fetch('/spp/detail-items?no_surat=' + encodeURIComponent(noSurat))
-            .then(r => r.json())
-            .then(data => {
-                document.getElementById('loadingRow').style.display = 'none';
-                let html = '';
-                let total = 0;
-                data.forEach((item, i) => {
-                    total += parseFloat(item.nominal ?? 0);
-                    html += `<tr><td class="text-center">${i+1}</td><td>${item.kode_budget}</td><td>${item.keterangan ?? '-'}</td><td class="text-end">Rp ${parseFloat(item.nominal ?? 0).toLocaleString('id-ID')}</td></tr>`;
-                });
-                document.getElementById('detailItemsBody').innerHTML = html;
-                document.getElementById('detailTotalNominal').innerText = 'Rp ' + total.toLocaleString('id-ID');
-            }).catch(() => {
-                document.getElementById('loadingRow').style.display = 'none';
-                document.getElementById('detailItemsBody').innerHTML = '<tr><td colspan="4" class="text-center text-danger">Gagal memuat data.</td></tr>';
-            });
-    }
+    // showDetailSpp provided by resources/js/modules/spp.js
 </script>
 @endpush
 @endsection

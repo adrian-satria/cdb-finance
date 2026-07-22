@@ -8,12 +8,15 @@ use Illuminate\Support\Facades\DB;
 
 class AuditTrailController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        // Tarik data log, urutkan dari yang paling baru terjadi
-        $logs = DB::table('audit_trails')
-            ->orderBy('created_at', 'desc')
-            ->paginate(50);
+        $query = DB::table('audit_trails');
+
+        $sortColumns = ['created_at', 'username', 'role', 'aksi', 'ip_address'];
+        $sort = in_array($request->query('sort'), $sortColumns) ? $request->query('sort') : 'created_at';
+        $direction = strtolower($request->query('direction', 'desc')) === 'asc' ? 'asc' : 'desc';
+
+        $logs = $query->orderBy($sort, $direction)->paginate(50);
 
         return view('admin.audit_trail.index', compact('logs'));
     }

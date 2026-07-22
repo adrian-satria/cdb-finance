@@ -24,11 +24,11 @@
         <div class="alert alert-success border-0 shadow-sm mb-4">{{ session('success') }}</div>
     @endif
 
-    <div class="card border-0 shadow-sm" style="border-radius: 16px;">
+    <div class="card card-bsmart">
         <div class="card-body p-4">
             <div class="table-responsive">
-                <table class="table align-middle" style="font-size: 13px;">
-                    <thead style="background: #f8fafd;">
+                <table class="table align-middle text-13">
+                    <thead class="bg-table-header">
                         <tr>
                             <th class="border-0 py-3">Group</th>
                             <th class="border-0 py-3">Label</th>
@@ -67,12 +67,7 @@
                             </td>
                         </tr>
                         @empty
-                        <tr>
-                            <td colspan="5" class="text-center text-muted py-5">
-                                <i class="fa-solid fa-sliders d-block fs-2 mb-2"></i>
-                                Belum ada pengaturan. Klik "Default Settings" untuk membuat.
-                            </td>
-                        </tr>
+                        <x-empty-state colspan="5" title="Belum Ada Pengaturan" message="Klik &lt;strong&gt;Default Settings&lt;/strong&gt; untuk membuat pengaturan awal." />
                         @endforelse
                     </tbody>
                 </table>

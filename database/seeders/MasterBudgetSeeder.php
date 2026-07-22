@@ -59,10 +59,10 @@ class MasterBudgetSeeder extends Seeder
             ['kode_project' => '38', 'kode_budget' => '1.2.4.1', 'nama_budget' => 'Education on Gender, Reproductive Health and KTPA/Violence Prevention'],
             ['kode_project' => '38', 'kode_budget' => '1.2.4.1.1', 'nama_budget' => 'Education Reproductive Health & KTPA/Violence Prevention (Village level)'],
             ['kode_project' => '38', 'kode_budget' => '1.2.4.1.2', 'nama_budget' => 'Education Reproductive Health & KTPA/Violence Prevention (Targeted Church)'],
-            
+
             // BARIS 44 YANG SUDAH BERHASIL DI-FIX OLEH GEMINI
             ['kode_project' => '38', 'kode_budget' => '1.2.4.2', 'nama_budget' => 'Supporting and Strengthening Community-Based Protection Group for Women and Children (LBK/WPA/PATBM)'],
-            
+
             ['kode_project' => '38', 'kode_budget' => '1.2.4.2.1', 'nama_budget' => 'Implementation of Violence against Women & Children Program in Alor'],
             ['kode_project' => '38', 'kode_budget' => '1.2.4.2.2', 'nama_budget' => 'Implementation of Violence against Women & Children Program in Malaka'],
             ['kode_project' => '38', 'kode_budget' => '1.3', 'nama_budget' => 'Component 3: Effective Project Management, Monitoring, and Evaluation'],
@@ -244,7 +244,7 @@ class MasterBudgetSeeder extends Seeder
         // 4. Gabungkan dan masukkan semua data ke database dengan sistem chunk
         $allData = array_merge($project38, $project40);
         $chunks = array_chunk($allData, 50);
-        
+
         foreach ($chunks as $chunk) {
             DB::table('master_budget')->insert($chunk);
         }

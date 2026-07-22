@@ -4,9 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\MasterBudget;
+use App\Services\AuditLogService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class BudgetImportController extends Controller
 {
@@ -35,12 +36,14 @@ class BudgetImportController extends Controller
                 // Avoid adding a hard dependency (maatwebsite/excel) unless the project has it.
                 // If dependency exists, we can support XLSX later. For now, show meaningful error.
                 $errors[] = 'Import Excel (XLSX/XLS) belum diaktifkan karena package excel belum terpasang di project ini.';
+
                 return back()->with('import_error', $errors)->withInput();
             } else {
                 $errors[] = 'Format file tidak didukung.';
             }
         } catch (\Throwable $e) {
-            $errors[] = 'Gagal membaca file: ' . $e->getMessage();
+            $errors[] = 'Gagal membaca file: '.$e->getMessage();
+
             return back()->with('import_error', $errors)->withInput();
         }
 
@@ -58,8 +61,8 @@ class BudgetImportController extends Controller
                 $lineNo = $idx + 2; // +header row
 
                 $kode_project = isset($r['kode_project']) ? trim((string) $r['kode_project']) : '';
-                $kode_budget  = isset($r['kode_budget']) ? trim((string) $r['kode_budget']) : '';
-                $nama_budget  = isset($r['nama_budget']) ? trim((string) $r['nama_budget']) : null;
+                $kode_budget = isset($r['kode_budget']) ? trim((string) $r['kode_budget']) : '';
+                $nama_budget = isset($r['nama_budget']) ? trim((string) $r['nama_budget']) : null;
                 $alokasi_dana = isset($r['alokasi_dana']) ? $r['alokasi_dana'] : null;
 
                 // Terkadang angka dari CSV dibaca sebagai string dengan spasi/typo
@@ -74,12 +77,14 @@ class BudgetImportController extends Controller
                 if ($kode_project === '' || $kode_budget === '' || $alokasi_dana === null || $alokasi_dana === '') {
                     $skipped++;
                     $errors[] = "Baris {$lineNo}: kode_project/kode_budget/alokasi_dana wajib diisi.";
+
                     continue;
                 }
 
-                if (!is_numeric($alokasi_dana)) {
+                if (! is_numeric($alokasi_dana)) {
                     $skipped++;
                     $errors[] = "Baris {$lineNo}: alokasi_dana harus angka.";
+
                     continue;
                 }
 
@@ -104,7 +109,7 @@ class BudgetImportController extends Controller
                     $existing->update($updatePayload);
                     $updated++;
 
-                    self::simpanLog(
+                    AuditLogService::log(
                         'MASTER_BUDGET_IMPORT_UPDATE',
                         "Update master_budget via import CSV (kode_project={$kode_project}, kode_budget={$kode_budget})",
                         $old
@@ -118,10 +123,9 @@ class BudgetImportController extends Controller
                     ]);
                     $inserted++;
 
-                    self::simpanLog(
+                    AuditLogService::log(
                         'MASTER_BUDGET_IMPORT_INSERT',
-                        "Insert master_budget via import CSV (kode_project={$kode_project}, kode_budget={$kode_budget})",
-                        null
+                        "Insert master_budget via import CSV (kode_project={$kode_project}, kode_budget={$kode_budget})"
                     );
                 }
             }
@@ -129,7 +133,7 @@ class BudgetImportController extends Controller
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
-            $errors[] = 'Gagal proses import: ' . $e->getMessage();
+            $errors[] = 'Gagal proses import: '.$e->getMessage();
         }
 
         return back()->with([
@@ -146,12 +150,12 @@ class BudgetImportController extends Controller
     private function parseCsv($file): array
     {
         $path = $file->getRealPath();
-        if (!$path) {
+        if (! $path) {
             throw new \RuntimeException('File tidak dapat diakses.');
         }
 
         $handle = fopen($path, 'rb');
-        if (!$handle) {
+        if (! $handle) {
             throw new \RuntimeException('Gagal membuka file CSV.');
         }
 
@@ -164,6 +168,7 @@ class BudgetImportController extends Controller
         $firstLine = fgets($handle);
         if ($firstLine === false) {
             fclose($handle);
+
             return [];
         }
         $commaCount = substr_count($firstLine, ',');
@@ -198,6 +203,7 @@ class BudgetImportController extends Controller
                     // BOM/hidden chars
                     $h = preg_replace('/^[\x{FEFF}]+/u', '', $h);
                     $h = Str::of($h)->replace(['\u{FEFF}'], '');
+
                     return (string) $h;
                 }, $data);
 
@@ -207,8 +213,8 @@ class BudgetImportController extends Controller
             // abaikan baris yang kemungkinan merupakan header ulang (mis. file ada baris kosong/terbaca sebagai baris data pertama)
             $isHeaderAgain = true;
             foreach ($header as $i => $key) {
-                $cell = isset($data[$i]) ? strtolower(trim((string)$data[$i])) : '';
-                if ($cell !== strtolower((string)$key)) {
+                $cell = isset($data[$i]) ? strtolower(trim((string) $data[$i])) : '';
+                if ($cell !== strtolower((string) $key)) {
                     $isHeaderAgain = false;
                     break;
                 }
@@ -249,4 +255,3 @@ class BudgetImportController extends Controller
         return (float) $v;
     }
 }
-

@@ -2,10 +2,10 @@
 
 namespace Tests\Unit\Models;
 
-use Tests\TestCase;
 use App\Models\SuratPermintaan;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
 
 class SuratPermintaanModelTest extends TestCase
 {
@@ -23,7 +23,7 @@ class SuratPermintaanModelTest extends TestCase
     private function createSpp(array $overrides = []): SuratPermintaan
     {
         return SuratPermintaan::create(array_merge([
-            'no_surat' => 'MOD-TEST-' . uniqid(),
+            'no_surat' => 'MOD-TEST-'.uniqid(),
             'tanggal' => now(),
             'kode_project' => 'MOD01',
             'status_surat' => 'Pending',

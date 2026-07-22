@@ -2,10 +2,10 @@
 
 namespace Tests\Unit\Models;
 
-use Tests\TestCase;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
 
 class UserModelTest extends TestCase
 {
@@ -22,6 +22,7 @@ class UserModelTest extends TestCase
             'updated_at' => now(),
         ]);
         DB::table('users')->where('id', $userId)->update(['id_user' => $userId]);
+
         return User::find($userId);
     }
 

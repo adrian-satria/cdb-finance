@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\RoleHelper;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -10,14 +11,25 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 class FileUploadService
 {
     const SPP_STORAGE_PATH = 'app/private/lampiran_spp';
+
     const SIGNATURE_STORAGE_PATH = 'app/private/signatures';
+
+    const ALLOWED_MIMES = [
+        'application/pdf',
+        'image/jpeg',
+        'image/png',
+    ];
+
+    const ALLOWED_SIG_MIMES = [
+        'image/jpeg',
+        'image/png',
+    ];
 
     /**
      * Upload SPP attachment files (maker or checker).
      *
-     * @param UploadedFile[] $files
-     * @param string $noSurat
-     * @param string $kategori 'MAKER' or 'CHECKER'
+     * @param  UploadedFile[]  $files
+     * @param  string  $kategori  'MAKER' or 'CHECKER'
      * @return array Uploaded file records inserted
      */
     public function uploadSppAttachments(array $files, string $noSurat, string $kategori = 'MAKER'): array
@@ -25,6 +37,10 @@ class FileUploadService
         $records = [];
 
         foreach ($files as $file) {
+            if (! $this->isValidMime($file, self::ALLOWED_MIMES)) {
+                throw new \RuntimeException("File {$file->getClientOriginalName()} ditolak: tipe file tidak diizinkan.");
+            }
+
             $ext = $file->getClientOriginalExtension();
             $prefix = strtolower($kategori);
             $namaFile = "{$prefix}_{$noSurat}_{$this->generateUniqueId()}.{$ext}";
@@ -51,16 +67,18 @@ class FileUploadService
     /**
      * Upload user signature image.
      *
-     * @param UploadedFile $file
-     * @param int $userId
      * @return string New signature filename
      */
     public function uploadSignature(UploadedFile $file, int $userId): string
     {
+        if (! $this->isValidMime($file, self::ALLOWED_SIG_MIMES)) {
+            throw new \RuntimeException("File {$file->getClientOriginalName()} ditolak: tipe file tidak diizinkan.");
+        }
+
         $this->deleteOldSignature($userId);
 
         $ext = $file->getClientOriginalExtension();
-        $newName = "sig_{$userId}_" . time() . "_{$this->generateUniqueId()}.{$ext}";
+        $newName = "sig_{$userId}_".time()."_{$this->generateUniqueId()}.{$ext}";
 
         $file->move(storage_path(self::SIGNATURE_STORAGE_PATH), $newName);
 
@@ -74,14 +92,12 @@ class FileUploadService
 
     /**
      * Delete old signature file for a user.
-     *
-     * @param int $userId
      */
     public function deleteOldSignature(int $userId): void
     {
         $old = DB::table('users')->where('id_user', $userId)->value('signature_path');
         if ($old) {
-            $oldPath = storage_path(self::SIGNATURE_STORAGE_PATH . '/' . $old);
+            $oldPath = storage_path(self::SIGNATURE_STORAGE_PATH.'/'.$old);
             if (file_exists($oldPath)) {
                 @unlink($oldPath);
             }
@@ -91,10 +107,6 @@ class FileUploadService
     /**
      * Download SPP attachment with authorization check.
      *
-     * @param string $namaFile
-     * @param string|null $role
-     * @param string|null $userArea
-     * @param string|null $userProject
      * @return BinaryFileResponse|null Null if unauthorized
      */
     public function downloadSppFile(
@@ -109,16 +121,16 @@ class FileUploadService
             ->select('s.kode_area', 's.kode_project', 's.no_surat')
             ->first();
 
-        if (!$fileRecord) {
+        if (! $fileRecord) {
             return null;
         }
 
-        if (!$this->canAccessFile($role, $userArea, $userProject, $fileRecord)) {
+        if (! $this->canAccessFile($role, $userArea, $userProject, $fileRecord)) {
             return null;
         }
 
-        $path = storage_path(self::SPP_STORAGE_PATH . '/' . $namaFile);
-        if (!file_exists($path)) {
+        $path = storage_path(self::SPP_STORAGE_PATH.'/'.$namaFile);
+        if (! file_exists($path)) {
             return null;
         }
 
@@ -128,42 +140,19 @@ class FileUploadService
     /**
      * Check if user can access a specific SPP file.
      *
-     * @param string|null $role
-     * @param string|null $userArea
-     * @param string|null $userProject
-     * @param object $fileRecord With kode_area, kode_project properties
-     * @return bool
+     * @param  object  $fileRecord  With kode_area, kode_project properties
      */
     public function canAccessFile(?string $role, ?string $userArea, ?string $userProject, object $fileRecord): bool
     {
-        $isGlobalRole = in_array($role, ['ADMIN', 'KASIR_PUSAT', 'DIREKTUR'], true);
-        if ($isGlobalRole) {
-            return true;
-        }
-
-        $isStaffArea = in_array($role, ['MAKER', 'AREA_MANAGER'], true) 
-            && ($userArea === $fileRecord->kode_area);
-        if ($isStaffArea) {
-            return true;
-        }
-
-        if (in_array($role, ['FINANCE_PROJECT', 'PROJECT_MANAGER', 'MANAGER_KEUANGAN'], true)) {
-            return ($role === 'MANAGER_KEUANGAN' && $userProject === null)
-                || ($userProject === $fileRecord->kode_project);
-        }
-
-        return false;
+        return RoleHelper::canAccessSpp($role, $userArea, $userProject, $fileRecord);
     }
 
     /**
      * Delete a specific SPP file.
-     *
-     * @param string $namaFile
-     * @return bool
      */
     public function deleteSppFile(string $namaFile): bool
     {
-        $path = storage_path(self::SPP_STORAGE_PATH . '/' . $namaFile);
+        $path = storage_path(self::SPP_STORAGE_PATH.'/'.$namaFile);
         if (file_exists($path)) {
             @unlink($path);
         }
@@ -178,38 +167,42 @@ class FileUploadService
     /**
      * Get full storage path for an SPP file.
      *
-     * @param string $namaFile
      * @return string|null Null if not found
      */
     public function getSppFilePath(string $namaFile): ?string
     {
-        $path = storage_path(self::SPP_STORAGE_PATH . '/' . $namaFile);
+        $path = storage_path(self::SPP_STORAGE_PATH.'/'.$namaFile);
+
         return file_exists($path) ? $path : null;
     }
 
     /**
      * Validate file extension against allowed types.
-     *
-     * @param UploadedFile $file
-     * @param array $allowedTypes
-     * @return bool
      */
     public function isValidFileType(UploadedFile $file, array $allowedTypes = ['pdf', 'jpg', 'jpeg', 'png']): bool
     {
         $ext = strtolower($file->getClientOriginalExtension());
+
         return in_array($ext, $allowedTypes, true);
     }
 
     /**
      * Validate file size (in KB).
      *
-     * @param UploadedFile $file
-     * @param int $maxSizeKb Default 5120 (5MB)
-     * @return bool
+     * @param  int  $maxSizeKb  Default 5120 (5MB)
      */
     public function isValidFileSize(UploadedFile $file, int $maxSizeKb = 5120): bool
     {
         return $file->getSize() <= ($maxSizeKb * 1024);
+    }
+
+    private function isValidMime(UploadedFile $file, array $allowed): bool
+    {
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime = finfo_file($finfo, $file->getPathname());
+        finfo_close($finfo);
+
+        return in_array($mime, $allowed, true);
     }
 
     private function generateUniqueId(): string

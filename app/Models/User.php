@@ -12,6 +12,7 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     protected $table = 'users';
+
     protected $primaryKey = 'id_user';
 
     public $timestamps = false;
@@ -90,8 +91,8 @@ class User extends Authenticatable
         return $this->akses()
             ->where(function ($q) use ($kodeProject) {
                 $q->where('kode_project', $kodeProject)
-                  ->orWhere('kode_project', 'all')
-                  ->orWhereNull('kode_project');
+                    ->orWhere('kode_project', 'all')
+                    ->orWhereNull('kode_project');
             })
             ->exists();
     }
@@ -105,7 +106,7 @@ class User extends Authenticatable
         return $this->akses()
             ->where(function ($q) use ($kodeArea) {
                 $q->where('kode_area', $kodeArea)
-                  ->orWhereNull('kode_area');
+                    ->orWhereNull('kode_area');
             })
             ->exists();
     }

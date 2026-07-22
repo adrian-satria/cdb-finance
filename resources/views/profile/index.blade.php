@@ -24,12 +24,12 @@
 
     <div class="row g-4">
         <div class="col-lg-5">
-            <div class="card border-0 shadow-sm" style="border-radius:16px;">
+            <div class="card card-bsmart">
                 <div class="card-body p-4">
                     <h5 class="fw-bold text-dark mb-3"><i class="fa-solid fa-signature me-2 text-primary"></i>Tanda Tangan Digital</h5>
                     <p class="text-muted small mb-4">Upload gambar tanda tangan untuk kebutuhan pencetakan PDF resmi.</p>
 
-                    <form action="{{ route('profile.signature') }}" method="POST" enctype="multipart/form-data">
+                    <form action="{{ route('profile.signature') }}" method="POST" enctype="multipart/form-data" data-loading>
                         @csrf
                         <div class="mb-3">
                             <label class="form-label fw-semibold text-secondary small">File Tanda Tangan</label>
@@ -48,19 +48,19 @@
                     @if(!empty($u) && !empty($u->signature_path))
                         <hr class="my-4">
                         <div class="text-muted small mb-2">Saat ini tersimpan:</div>
-                        <div class="text-dark fw-semibold" style="word-break:break-word;">{{ $u->signature_path }}</div>
+                        <div class="text-dark fw-semibold" style="word-break:break-word;">{{ basename($u->signature_path) }}</div>
                     @endif
                 </div>
             </div>
         </div>
 
         <div class="col-lg-7">
-            <div class="card border-0 shadow-sm" style="border-radius:16px;">
+            <div class="card card-bsmart">
                 <div class="card-body p-4">
                     <h5 class="fw-bold text-dark mb-3"><i class="fa-solid fa-key me-2 text-primary"></i>Ganti Password</h5>
                     <p class="text-muted small mb-4">Pastikan password baru tidak mudah ditebak.</p>
 
-                    <form action="{{ route('profile.password') }}" method="POST">
+                    <form action="{{ route('profile.password') }}" method="POST" data-loading>
                         @csrf
                         <div class="mb-3">
                             <label class="form-label fw-semibold text-secondary small">Password Saat Ini</label>

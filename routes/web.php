@@ -1,16 +1,17 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\SppController;
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\Admin\BudgetController; 
-use App\Http\Controllers\Admin\UserController; 
+use App\Http\Controllers\Admin\ActivityController;
 use App\Http\Controllers\Admin\AuditTrailController;
-use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\Admin\BudgetController;
+use App\Http\Controllers\Admin\BudgetImportController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\SystemSettingController;
-use App\Http\Controllers\Admin\ActivityController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\SppController;
+use Illuminate\Support\Facades\Route;
 
 // =========================================================================
 // ROUTE PUBLIC (Bisa diakses sebelum login)
@@ -18,8 +19,7 @@ use App\Http\Controllers\Admin\ActivityController;
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'authenticate'])->middleware('throttle:5,1'); // Rate limit: 5 attempts per 1 menit
 
-require __DIR__ . '/web_profile.php';
-
+require __DIR__.'/web_profile.php';
 
 // =========================================================================
 // ROUTE TERPROTEKSI (Wajib Login - Tapi belum wajib punya role)
@@ -34,18 +34,18 @@ Route::middleware(['auth'])->group(function () {
 // =========================================================================
 Route::middleware(['auth', 'validate.session'])->group(function () {
 
-Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'index']);
+    Route::get('/dashboard', [DashboardController::class, 'index']);
 
     // --- TRANSAKSI SPP (Akses Dikontrol State Machine di Controller) ---
     Route::get('/spp', [SppController::class, 'index']);
 
     // --- kelola surat (Super review) ---
-    Route::get('/spp/kelola', [App\Http\Controllers\SppController::class, 'kelola'])->middleware('auth');
+    Route::get('/spp/kelola', [SppController::class, 'kelola']);
     Route::get('/spp/tambah', [SppController::class, 'create']);
-    Route::post('/spp/simpan', [SppController::class, 'store']); // Disamakan pakai /simpan sesuai view form-mu
-    Route::post('/spp/validasi', [SppController::class, 'validasi']);
-    Route::post('/spp/cairkan', [SppController::class, 'cairkan']);
-    
+    Route::post('/spp/simpan', [SppController::class, 'store'])->middleware('throttle:30,1');
+    Route::post('/spp/validasi', [SppController::class, 'validasi'])->middleware('throttle:30,1');
+    Route::post('/spp/cairkan', [SppController::class, 'cairkan'])->middleware('throttle:10,1');
+
     // Secure Dokumen & API Internal Detail
     Route::get('/spp/detail-items', [SppController::class, 'getDetailItems']);
     Route::get('/spp/preview-cetak', [SppController::class, 'previewPdf']);
@@ -61,35 +61,34 @@ Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'inde
     // =========================================================================
     // MODUL GRUP ADMIN B-SMART (DIKUNCI KETAT DENGAN MIDDLEWARE role:ADMIN)
     // =========================================================================
-Route::middleware(['role:ADMIN'])->prefix('admin')->name('admin.')->group(function () {
+    Route::middleware(['role:ADMIN'])->prefix('admin')->name('admin.')->group(function () {
 
-    require __DIR__ . '/admin.php';
+        require __DIR__.'/admin.php';
 
-    // Admin access management (user_access)
-
+        // Admin access management (user_access)
 
         // (routes for access management moved to routes/admin.php)
-        
+
         // --- CRUD Master Budget (Aman & Terpantau) ---
 
         Route::get('/budget', [BudgetController::class, 'index'])->name('budget.index');
         Route::get('/budget/create', [BudgetController::class, 'create'])->name('budget.create');
-        Route::post('/budget/store', [BudgetController::class, 'store'])->name('budget.store');
+        Route::post('/budget/store', [BudgetController::class, 'store'])->name('budget.store')->middleware('throttle:30,1');
         Route::get('/budget/{id}/edit', [BudgetController::class, 'edit'])->name('budget.edit');
-        Route::put('/budget/{id}/update', [BudgetController::class, 'update'])->name('budget.update');
-        Route::delete('/budget/{id}/delete', [BudgetController::class, 'destroy'])->name('budget.destroy');
+        Route::put('/budget/{id}/update', [BudgetController::class, 'update'])->name('budget.update')->middleware('throttle:30,1');
+        Route::delete('/budget/{id}/delete', [BudgetController::class, 'destroy'])->name('budget.destroy')->middleware('throttle:30,1');
 
         // --- Import Master Budget (CSV) ---
-        Route::get('/budget/import', [\App\Http\Controllers\Admin\BudgetImportController::class, 'showForm'])->name('budget.import.form');
-        Route::post('/budget/import', [\App\Http\Controllers\Admin\BudgetImportController::class, 'import'])->name('budget.import');
+        Route::get('/budget/import', [BudgetImportController::class, 'showForm'])->name('budget.import.form');
+        Route::post('/budget/import', [BudgetImportController::class, 'import'])->name('budget.import')->middleware('throttle:10,1');
 
         // --- CRUD Kelola User ---
         Route::get('/user', [UserController::class, 'index'])->name('user.index');
         Route::get('/user/create', [UserController::class, 'create'])->name('user.create');
-        Route::post('/user/store', [UserController::class, 'store'])->name('user.store');
+        Route::post('/user/store', [UserController::class, 'store'])->name('user.store')->middleware('throttle:10,1');
         Route::get('/user/{id}/edit', [UserController::class, 'edit'])->name('user.edit');
-        Route::put('/user/{id}/update', [UserController::class, 'update'])->name('user.update');
-        Route::delete('/user/{id}/delete', [UserController::class, 'destroy'])->name('user.destroy');
+        Route::put('/user/{id}/update', [UserController::class, 'update'])->name('user.update')->middleware('throttle:10,1');
+        Route::delete('/user/{id}/delete', [UserController::class, 'destroy'])->name('user.destroy')->middleware('throttle:10,1');
 
         // --- Sistem Audit Trail Forensik ---
         Route::get('/audit-trail', [AuditTrailController::class, 'index'])->name('audit_trail.index');
@@ -101,14 +100,17 @@ Route::middleware(['role:ADMIN'])->prefix('admin')->name('admin.')->group(functi
 
         // --- SYSTEM SETTINGS ---
         Route::get('/settings', [SystemSettingController::class, 'index'])->name('settings.index');
-        Route::post('/settings/update', [SystemSettingController::class, 'update'])->name('admin.settings.update');
-        Route::post('/settings/create-default', [SystemSettingController::class, 'createDefault'])->name('admin.settings.create-default');
-        Route::post('/settings/clear-cache', [SystemSettingController::class, 'clearCache'])->name('admin.settings.clear-cache');
+        Route::post('/settings/update', [SystemSettingController::class, 'update'])->name('settings.update')->middleware('throttle:30,1');
+        Route::post('/settings/create-default', [SystemSettingController::class, 'createDefault'])->name('settings.create-default')->middleware('throttle:10,1');
+        Route::post('/settings/clear-cache', [SystemSettingController::class, 'clearCache'])->name('settings.clear-cache')->middleware('throttle:10,1');
 
         // --- ACTIVITY MONITORING ---
         Route::get('/activity', [ActivityController::class, 'index'])->name('activity.index');
-        Route::get('/activity/online-users', [ActivityController::class, 'onlineUsers'])->name('admin.activity.online');
+        Route::get('/activity/online-users', [ActivityController::class, 'onlineUsers'])->name('activity.online');
     });
+
+    // --- SWITCH ROLE ---
+    Route::post('/switch-role', [AuthController::class, 'switchRole']);
 
     // --- PROSES LOGOUT ---
     Route::post('/logout', [AuthController::class, 'logout']);

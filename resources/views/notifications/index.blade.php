@@ -16,7 +16,7 @@
         <div class="alert alert-success border-0 shadow-sm mb-4">{{ session('success') }}</div>
     @endif
 
-    <div class="card border-0 shadow-sm" style="border-radius: 16px;">
+    <div class="card card-bsmart">
         <div class="card-body p-0">
             @forelse($notifications as $n)
             <div class="p-4 border-bottom {{ $n->is_read ? '' : 'bg-primary-subtle bg-opacity-10' }}" style="border-color: #f1f3f4;">
@@ -62,10 +62,7 @@
                 </div>
             </div>
             @empty
-            <div class="text-center py-5">
-                <i class="fa-regular fa-bell-slash d-block fs-1 text-muted mb-3"></i>
-                <p class="text-muted">Tidak ada notifikasi.</p>
-            </div>
+            <x-empty-state icon="fa-regular fa-bell-slash" title="Tidak ada notifikasi." />
             @endforelse
         </div>
     </div>

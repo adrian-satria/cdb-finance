@@ -13,12 +13,14 @@ class BudgetController extends Controller
     {
         // Mengambil semua data budget beserta data project terkait
         $budgets = MasterBudget::with('project')->paginate(20);
+
         return view('admin.budget.index', compact('budgets'));
     }
 
     public function create()
     {
         $projects = Project::all();
+
         return view('admin.budget.create', compact('projects'));
     }
 
@@ -40,6 +42,7 @@ class BudgetController extends Controller
     {
         $budget = MasterBudget::findOrFail($id);
         $projects = Project::all();
+
         return view('admin.budget.edit', compact('budget', 'projects'));
     }
 
@@ -58,7 +61,7 @@ class BudgetController extends Controller
             return redirect()->back()
                 ->withInput()
                 ->withErrors([
-                    'alokasi_dana' => 'Alokasi dana tidak boleh kurang dari total actual yang sudah terserap (Rp ' . number_format($budget->terserap ?? 0, 0, ',', '.') . ').',
+                    'alokasi_dana' => 'Alokasi dana tidak boleh kurang dari total actual yang sudah terserap (Rp '.number_format($budget->terserap ?? 0, 0, ',', '.').').',
                 ]);
         }
 

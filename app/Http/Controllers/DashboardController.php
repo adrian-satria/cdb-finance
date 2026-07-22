@@ -3,20 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Project;
+use App\Support\RoleHelper;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
-    protected array $projectScopedRoles = [
-        'FINANCE_PROJECT', 'PROJECT_MANAGER', 'MANAGER_KEUANGAN',
-        'KOORDINATOR_KEUANGAN', 'KOORDINATOR_PK', 'KOORDINATOR_TC',
-        'KOORDINATOR_DIKLAT', 'KOORDINATOR_KLINIK', 'KOORDINATOR_BATRA',
-        'KOORDINATOR_BIDANG',
-    ];
-
-    protected array $globalRoles = ['ADMIN', 'KASIR_PUSAT', 'DIREKTUR'];
-
     public function index(Request $request)
     {
         $role = session('role');
@@ -30,7 +23,7 @@ class DashboardController extends Controller
         }
 
         // --- SPP Query with Role Scope ---
-        $sppQuery = $this->buildScopedQuery($role, $kodeArea, $userProject, $selectedProject);
+        $sppQuery = self::buildScopedQuery($role, $kodeArea, $userProject, $selectedProject);
 
         // --- Stat Counts ---
         $countPending = (clone $sppQuery)
@@ -62,7 +55,7 @@ class DashboardController extends Controller
         // --- Budget Per Project (Admin only) ---
         $budgetPerProject = null;
         $criticalBudgets = null;
-        if ($role === 'ADMIN' && !$selectedProject) {
+        if ($role === 'ADMIN' && ! $selectedProject) {
             $budgetPerProject = DB::table('master_budget')
                 ->select(
                     'kode_project',
@@ -74,11 +67,11 @@ class DashboardController extends Controller
                 ->orderBy('kode_project')
                 ->get();
 
-            $criticalBudgets = $budgetPerProject->filter(fn($b) => $b->persen >= 90);
+            $criticalBudgets = $budgetPerProject->filter(fn ($b) => $b->persen >= 90);
         }
 
         // --- Monthly Chart ---
-        $monthlyChartQuery = $this->buildScopedQuery($role, $kodeArea, $userProject, $selectedProject);
+        $monthlyChartQuery = self::buildScopedQuery($role, $kodeArea, $userProject, $selectedProject);
         $monthlyChart = $monthlyChartQuery
             ->select(
                 DB::raw('MONTH(created_at) as bulan_num'),
@@ -91,6 +84,7 @@ class DashboardController extends Controller
             ->get()
             ->map(function ($item) {
                 $months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
                 return [
                     'bulan' => $months[$item->bulan_num] ?? $item->bulan_num,
                     'total' => (int) $item->total,
@@ -119,7 +113,7 @@ class DashboardController extends Controller
         $tasks = $tasksQuery->orderBy('created_at', 'desc')->limit(10)->get();
 
         // --- Projects for Admin Filter ---
-        $projects = in_array($role, $this->globalRoles, true)
+        $projects = RoleHelper::isGlobal($role)
             ? Project::orderBy('kode_project')->get()
             : collect();
 
@@ -131,7 +125,7 @@ class DashboardController extends Controller
         ));
     }
 
-    protected function buildScopedQuery(string $role, ?string $kodeArea, ?string $userProject, ?string $selectedProject): \Illuminate\Database\Query\Builder
+    protected static function buildScopedQuery(string $role, ?string $kodeArea, ?string $userProject, ?string $selectedProject): Builder
     {
         $query = DB::table('surat_permintaan');
 
@@ -139,9 +133,9 @@ class DashboardController extends Controller
             return $query->where('kode_project', $selectedProject);
         }
 
-        if (in_array($role, ['MAKER', 'AREA_MANAGER'], true)) {
+        if (RoleHelper::isStaffArea($role)) {
             $query->where('kode_area', $kodeArea);
-        } elseif (in_array($role, $this->projectScopedRoles, true)) {
+        } elseif (RoleHelper::isProjectScoped($role)) {
             if ($userProject && $userProject !== '' && $userProject !== 'all') {
                 $query->where('kode_project', $userProject);
             }

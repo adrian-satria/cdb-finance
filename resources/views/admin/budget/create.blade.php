@@ -6,12 +6,12 @@
 <div class="container py-4">
     <div class="row justify-content-center">
         <div class="col-md-8">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-white py-3 border-light">
+            <div class="card card-bsmart">
+                <div class="card-header bg-white py-3 border-0">
                     <h5 class="fw-bold text-primary m-0"><i class="fa-solid fa-plus-circle me-2"></i>Tambah Master Budget Baru</h5>
                 </div>
                 <div class="card-body p-4">
-                    <form action="{{ route('admin.budget.store') }}" method="POST">
+                    <form action="{{ route('admin.budget.store') }}" method="POST" data-loading>
                         @csrf
                         
                         <div class="mb-4">

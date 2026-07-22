@@ -15,7 +15,7 @@ class ActivityController extends Controller
         $query = ActivityLog::orderBy('created_at', 'desc');
 
         if ($request->filled('username')) {
-            $query->where('username', 'like', '%' . $request->username . '%');
+            $query->where('username', 'like', '%'.$request->username.'%');
         }
 
         if ($request->filled('aktivitas')) {
@@ -30,7 +30,10 @@ class ActivityController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        $activities = $query->paginate(50);
+        $sortColumns = ['created_at', 'username', 'role', 'aktivitas', 'ip_address'];
+        $sort = in_array($request->query('sort'), $sortColumns) ? $request->query('sort') : 'created_at';
+        $direction = strtolower($request->query('direction', 'desc')) === 'asc' ? 'asc' : 'desc';
+        $activities = $query->orderBy($sort, $direction)->paginate(50);
 
         $activeUsers = User::whereHas('akses', function ($q) {
             $q->whereNotNull('role');

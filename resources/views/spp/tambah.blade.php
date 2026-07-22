@@ -3,139 +3,22 @@
 @section('title', 'Input SPP | CDB Finance - B-SMART')
 
 @section('content')
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
 <style>
-    body {
-        background-color: #f8fafd !important; /* Latar belakang kanvas lembut khas Google */
-    }
-    .stitch-card { 
-        background: #ffffff; 
-        border: none !important; 
-        border-radius: 24px !important; 
-        box-shadow: 0 4px 20px rgba(26, 115, 232, 0.02) !important; 
-        margin-bottom: 24px; 
-    }
-    .stitch-card-header { 
-        padding: 24px 24px 12px 24px; 
-        border-bottom: none !important; 
-        display: flex; 
-        align-items: center; 
-        gap: 12px; 
-    }
-    .stitch-card-title { 
-        color: #1f1f1f; 
-        font-size: 20px; 
-        font-weight: 600; 
-        letter-spacing: -0.3px; 
-        margin: 0; 
-    }
-    .stitch-card-body { 
-        padding: 24px; 
-    }
-    .form-label-custom { 
-        font-size: 13px; 
-        font-weight: 500; 
-        color: #5f6368; 
-        margin-bottom: 8px; 
-        display: block; 
-    }
-    .form-control-custom, .form-select-custom { 
-        font-size: 14px; 
-        color: #3c4043; 
-        background-color: #ffffff; 
-        border: 1px solid #e1e3e5 !important; 
-        border-radius: 12px !important; /* Super rounded khas Stitch */
-        padding: 10px 14px; 
-        width: 100%; 
-        transition: all 0.2s ease-in-out;
-    }
-    .form-control-custom:focus, .form-select-custom:focus {
-        border-color: #1a73e8 !important;
-        box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.15) !important;
-        outline: none;
-    }
-    .form-control-custom[readonly] { 
-        background-color: #f1f3f4 !important; 
-        cursor: not-allowed; 
-        color: #5f6368; 
-    }
-    .form-divider { 
-        border: 0; 
-        border-top: 1px dashed #e1e3e5; 
-        margin: 28px 0; 
-    }
-    
-    .btn-bsmart-primary { 
-        background: #1a73e8 !important; 
-        color: #fff !important; 
-        font-weight: 600; 
-        padding: 12px 28px; 
-        border: none; 
-        border-radius: 100px !important; /* Pill-shaped button */
-        box-shadow: 0 2px 6px rgba(26,115,232,0.15); 
-        cursor: pointer; 
-        transition: background-color 0.2s;
-    }
-    .btn-bsmart-primary:hover {
-        background-color: #1557b0 !important;
-    }
-    .btn-bsmart-secondary { 
-        background: #ffffff; 
-        color: #5f6368; 
-        font-weight: 600; 
-        padding: 12px 28px; 
-        border: 1px solid #e1e3e5; 
-        border-radius: 100px !important; 
-        cursor: pointer; 
-        margin-right: 8px; 
-        transition: background-color 0.2s;
-    }
-    .btn-bsmart-secondary:hover {
-        background-color: #f8f9fa;
-    }
-    .btn-add-row {
-        background: transparent;
-        color: #1a73e8;
-        border: 1px solid #e1e3e5;
-        font-weight: 600;
-        padding: 8px 20px;
-        border-radius: 100px;
-        font-size: 13px;
-        transition: all 0.2s;
-    }
     .btn-add-row:hover {
         background: rgba(26, 115, 232, 0.04);
         border-color: #1a73e8;
-    }
-    .total-box { 
-        background-color: rgba(26, 115, 232, 0.06); 
-        border-radius: 14px; 
-        padding: 12px 24px; 
-        font-weight: 700; 
-        font-size: 16px; 
-        color: #1a73e8; 
-    }
-    .stitch-table thead {
-        background-color: #f8fafd !important;
-        color: #5f6368;
-        font-size: 13px;
-    }
-    .stitch-table th, .stitch-table td {
-        padding: 14px 12px !important;
-        border-color: #f1f3f4 !important;
     }
 </style>
 
 <div class="row">
     <div class="col-12">
-        <div class="stitch-card">
-            <div class="stitch-card-header">
+        <div class="card card-bsmart">
+            <div class="card-header bg-transparent border-0 pt-4 px-4 d-flex align-items-center gap-3">
                 <i class="fa-solid fa-file-signature fs-4 text-primary"></i>
-                <h5 class="stitch-card-title">Form Input Surat Permintaan Pembayaran (SPP)</h5>
+                <h5 class="fw-bold text-dark m-0" style="font-size:20px;">Form Input Surat Permintaan Pembayaran (SPP)</h5>
             </div>
-            <div class="stitch-card-body">
-                <form action="/spp/simpan" method="POST" enctype="multipart/form-data">
+            <div class="card-body p-4">
+                <form action="/spp/simpan" method="POST" enctype="multipart/form-data" data-loading>
                     @csrf 
 
                     <div class="row g-3 mb-4">
@@ -156,12 +39,23 @@
                         </div>
                         <div class="col-md-4">
                             <label class="form-label-custom">Project (Program)</label>
-                            <select name="kode_project" id="projectSelect" class="form-select-custom" required onchange="filterBudgetMaster()">
-                                <option value="">-- Pilih Project --</option>
+                            <select name="kode_project" id="projectSelect"
+                                class="form-select-custom" required
+                                onchange="filterBudgetMaster()"
+                                {{ session('kode_project') && session('kode_project') !== 'all' ? 'disabled' : '' }}>
+                                @if(!session('kode_project') || session('kode_project') === 'all')
+                                    <option value="">-- Pilih Project --</option>
+                                @endif
                                 @foreach($projects as $p)
-                                    <option value="{{ $p->kode_project }}">{{ $p->nama_project }}</option>
+                                    <option value="{{ $p->kode_project }}"
+                                        {{ session('kode_project') == $p->kode_project ? 'selected' : '' }}>
+                                        {{ $p->nama_project }}
+                                    </option>
                                 @endforeach
                             </select>
+                            @if(session('kode_project') && session('kode_project') !== 'all')
+                                <input type="hidden" name="kode_project" value="{{ session('kode_project') }}">
+                            @endif
                         </div>
                     </div>
 
@@ -182,12 +76,15 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label-custom">Sumber Dana</label>
-                            <select name="sumber_dana" class="form-select-custom" required>
+                            <select name="sumber_dana" class="form-select-custom" required onchange="showSumberDanaDetail(this)">
                                 <option value="">-- Pilih Sumber Dana --</option>
                                 @foreach($sumber_danas as $sd)
-                                    <option value="{{ $sd->nama_bank }}">{{ $sd->nama_bank }} (Ref: {{ $sd->no_rekening }})</option>
+                                    <option value="{{ $sd->id_bank_kas }}" data-nama="{{ $sd->nama_rekening }}" data-norek="{{ $sd->no_rekening }}">
+                                        {{ $sd->nama_rekening }}
+                                    </option>
                                 @endforeach
                             </select>
+                            <div id="detailSumberDana" class="mt-1" style="font-size:11px; line-height:1.3;"></div>
                         </div>
                     </div>
 
@@ -219,7 +116,7 @@
                     </div>
 
                     <div class="table-responsive mb-3">
-                        <table class="table align-middle stitch-table" id="detailTable">
+                        <table class="table align-middle table-bsmart" id="detailTable">
                             <thead>
                                 <tr>
                                     <th width="5%" class="text-center">No</th>
@@ -236,7 +133,12 @@
                                     <td>
                                         <input type="text" name="items[0][kode_budget]" class="form-control-custom row-budget-input" readonly placeholder="Mengikuti Master">
                                     </td>
-                                    <td><input type="number" name="items[0][jumlah]" class="form-control form-control-custom input-jumlah" placeholder="0" required oninput="hitungTotalNominal()"></td>
+                                    <td>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-transparent border-end-0 px-2" style="font-size:12px; color:#6b7280;">Rp</span>
+                                            <input type="text" name="items[0][jumlah]" class="form-control form-control-custom input-jumlah" placeholder="0" required inputmode="numeric" oninput="formatNominal(this); hitungTotalNominal();">
+                                        </div>
+                                    </td>
                                     <td class="text-center">
                                         <button type="button" class="btn btn-sm btn-outline-danger border-0 rounded-circle" onclick="hapusBarisTabel(this)"><i class="fa-solid fa-trash"></i></button>
                                     </td>
@@ -269,8 +171,19 @@
 </div>
 
 <script>
-    // Pastikan data dari Laravel diubah menjadi JSON Object yang valid
     const budgetData = @json($master_budgets);
+
+    function showSumberDanaDetail(sel) {
+        const opt = sel.options[sel.selectedIndex];
+        const div = document.getElementById('detailSumberDana');
+        if (opt && opt.value) {
+            const nama = opt.getAttribute('data-nama');
+            const norek = opt.getAttribute('data-norek');
+            div.innerHTML = '<span class="fw-semibold">' + nama + '</span><br><span style="font-size:10px; color:#6b7280;">' + norek + '</span>';
+        } else {
+            div.innerHTML = '';
+        }
+    }
 
     // 1. Fungsi filter dropdown master berdasarkan project yang dipilih
     function filterBudgetMaster() {
@@ -296,6 +209,10 @@
         syncBudgetToRows();
     }
 
+    @if(session('kode_project') && session('kode_project') !== 'all')
+        document.addEventListener('DOMContentLoaded', filterBudgetMaster);
+    @endif
+
     // 2. Sinkronisasi nilai dari Master Dropdown ke semua baris input tabel rincian di bawah secara otomatis
     function syncBudgetToRows() {
         const masterValue = document.getElementById('budgetMasterSelect').value;
@@ -313,8 +230,8 @@
 
     function moneyToInt(val) {
         if (val === null || val === undefined) return 0;
-        const str = String(val).replace(/[^0-9.-]/g, '');
-        const num = parseFloat(str);
+        const str = String(val).replace(/[^0-9]/g, '');
+        const num = parseInt(str, 10);
         return isNaN(num) ? 0 : num;
     }
 
@@ -406,7 +323,12 @@
             <td>
                 <input type="text" name="items[${rowIndex}][kode_budget]" class="form-control-custom row-budget-input" value="${masterValue}" readonly placeholder="Mengikuti Master">
             </td>
-            <td><input type="number" name="items[${rowIndex}][jumlah]" class="form-control form-control-custom input-jumlah" placeholder="0" required oninput="hitungTotalNominal()"></td>
+            <td>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-transparent border-end-0 px-2" style="font-size:12px; color:#6b7280;">Rp</span>
+                    <input type="text" name="items[${rowIndex}][jumlah]" class="form-control form-control-custom input-jumlah" placeholder="0" required inputmode="numeric" oninput="formatNominal(this); hitungTotalNominal();">
+                </div>
+            </td>
             <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger border-0 rounded-circle" onclick="hapusBarisTabel(this)"><i class="fa-solid fa-trash"></i></button></td>
         `;
         tableBody.appendChild(newRow);
@@ -426,17 +348,31 @@
         }
     }
 
-    // 4. Hitung akumulasi total live
+    // 4. Format input nominal: hanya angka, separator ribuan otomatis
+    function formatNominal(input) {
+        let raw = input.value.replace(/[^0-9]/g, '');
+        if (raw === '') { input.value = ''; return; }
+        let num = parseInt(raw, 10);
+        input.value = num.toLocaleString('id-ID');
+    }
+
+    function rawNominal(input) {
+        return parseInt(input.value.replace(/[^0-9]/g, '')) || 0;
+    }
+
+    // 5. Hitung akumulasi total live
     function hitungTotalNominal() {
         let total = 0;
         const inputs = document.querySelectorAll('.input-jumlah');
-        
-        inputs.forEach(input => {
-            let nilai = parseFloat(input.value) || 0;
-            total += nilai;
-        });
-
+        inputs.forEach(input => { total += rawNominal(input); });
         document.getElementById('totalNominalText').innerText = 'Rp ' + new Intl.NumberFormat('id-ID').format(total);
     }
+
+    // 6. Bersihkan format sebelum submit
+    document.querySelector('form[data-loading]')?.addEventListener('submit', function() {
+        document.querySelectorAll('.input-jumlah').forEach(input => {
+            input.value = rawNominal(input);
+        });
+    });
 </script>
 @endsection

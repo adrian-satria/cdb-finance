@@ -23,11 +23,31 @@
         </div>
     @endif
 
-    <div class="card shadow-sm border-0">
+    <!-- Search / Filter -->
+    <div class="card card-bsmart mb-4">
+        <div class="card-body py-3">
+            <form method="GET" class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label small text-muted mb-1">Cari Budget</label>
+                    <input type="text" name="search" class="form-control form-control-sm" value="{{ request('search') }}" placeholder="Kode budget, nama, project...">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary btn-sm w-100">Cari</button>
+                </div>
+                @if(request('search'))
+                <div class="col-auto">
+                    <a href="{{ route('admin.budget.index') }}" class="btn btn-outline-danger btn-sm"><i class="fa-solid fa-xmark me-1"></i>Reset</a>
+                </div>
+                @endif
+            </form>
+        </div>
+    </div>
+
+    <div class="card card-bsmart">
         <div class="card-body p-4">
-            <div class="table-responsive bg-white rounded-4 p-2 shadow-sm border-0">
-                <table class="table align-middle m-0" style="border-color: #f1f3f4;">
-                    <thead style="background: #f8fafd; color: #5f6368; font-size: 13px; font-weight: 600;">
+            <div class="table-responsive">
+                <table class="table align-middle m-0 table-bsmart">
+                    <thead>
                         <tr>
                             <th width="4%" class="text-center border-0 py-3">No</th>
                             <th width="8%" class="text-center border-0 py-3">Project</th>
@@ -40,8 +60,8 @@
                         </tr>
                     </thead>
 
-                    <tbody style="font-size: 13px; color: #3c4043;">
-                        @foreach($budgets as $index => $b)
+                    <tbody>
+                        @forelse($budgets as $index => $b)
                         @php
                             $alokasi = floatval($b->alokasi_dana ?? 0);
                             $terserap = floatval($b->terserap ?? 0);
@@ -51,7 +71,7 @@
                             <td class="text-center fw-semibold text-secondary py-3">{{ $budgets->firstItem() + $index }}</td>
                             
                             <td class="text-center">
-                                <span class="badge bg-light text-dark border px-2.5 py-1.5 fw-semibold" style="border-radius: 8px;">
+                                <span class="badge bg-light text-dark border badge-custom">
                                     {{ $b->kode_project }}
                                 </span>
                             </td>
@@ -80,27 +100,28 @@
                             
                             <td class="text-center">
                                 <div class="d-inline-flex gap-1">
-                                    <a href="{{ route('admin.budget.edit', $b->id_budget) }}" class="btn btn-sm btn-link text-warning p-1" title="Edit Budget" style="font-size: 15px;">
+                                    <a href="{{ route('admin.budget.edit', $b->id_budget) }}" class="btn btn-sm btn-outline-warning btn-icon-circle" title="Edit Budget">
                                         <i class="fa-regular fa-pen-to-square"></i>
                                     </a>
-                                    <form action="{{ route('admin.budget.destroy', $b->id_budget) }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus budget {{ $b->kode_budget }} ?');">
+                                    <form action="{{ route('admin.budget.destroy', $b->id_budget) }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus budget {{ $b->kode_budget }} ?');" class="d-inline">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-link text-danger p-1 border-0 bg-transparent" title="Hapus Budget" style="font-size: 15px;">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger btn-icon-circle" title="Hapus Budget">
                                             <i class="fa-regular fa-trash-can"></i>
                                         </button>
                                     </form>
                                 </div>
                             </td>
                         </tr>
-                        @endforeach
+                        @empty
+                        <x-empty-state colspan="8" title="Belum Ada Data Budget" message="Belum ada data anggaran yang tersedia." />
+                        @endforelse
                     </tbody>
                 </table>
             </div>
             
-            <!-- Pagination Links -->
             <div class="d-flex justify-content-center mt-4">
-                {{ $budgets->links() }}
+                {{ $budgets->appends(request()->query())->links() }}
             </div>
         </div>
     </div>

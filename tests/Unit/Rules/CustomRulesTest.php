@@ -2,12 +2,12 @@
 
 namespace Tests\Unit\Rules;
 
-use Tests\TestCase;
 use App\Rules\BudgetExists;
 use App\Rules\ProjectExists;
 use App\Rules\ValidRoleForUser;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
 
 class CustomRulesTest extends TestCase
 {
@@ -28,21 +28,21 @@ class CustomRulesTest extends TestCase
             'terserap' => '0',
         ]);
 
-        $rule = new BudgetExists();
+        $rule = new BudgetExists;
         $this->assertTrue($rule->passes('kode_budget', 'B001'));
     }
 
     /** @test */
     public function budget_exists_fails_when_budget_not_found()
     {
-        $rule = new BudgetExists();
+        $rule = new BudgetExists;
         $this->assertFalse($rule->passes('kode_budget', 'NONEXISTENT'));
     }
 
     /** @test */
     public function budget_exists_returns_correct_message()
     {
-        $rule = new BudgetExists();
+        $rule = new BudgetExists;
         $message = $rule->message();
         $this->assertStringContainsString('tidak ditemukan', $message);
     }
@@ -50,7 +50,7 @@ class CustomRulesTest extends TestCase
     /** @test */
     public function budget_exists_handles_null_value()
     {
-        $rule = new BudgetExists();
+        $rule = new BudgetExists;
         $this->assertFalse($rule->passes('kode_budget', null));
     }
 
@@ -61,28 +61,28 @@ class CustomRulesTest extends TestCase
     /** @test */
     public function project_exists_passes_when_project_found()
     {
-        $rule = new ProjectExists();
+        $rule = new ProjectExists;
         $this->assertTrue($rule->passes('kode_project', '38'));
     }
 
     /** @test */
     public function project_exists_fails_when_project_not_found()
     {
-        $rule = new ProjectExists();
+        $rule = new ProjectExists;
         $this->assertFalse($rule->passes('kode_project', '99'));
     }
 
     /** @test */
     public function project_exists_returns_correct_message()
     {
-        $rule = new ProjectExists();
+        $rule = new ProjectExists;
         $this->assertStringContainsString('tidak ditemukan', $rule->message());
     }
 
     /** @test */
     public function project_exists_fails_for_null_value()
     {
-        $rule = new ProjectExists();
+        $rule = new ProjectExists;
         $this->assertFalse($rule->passes('kode_project', null));
     }
 
@@ -93,14 +93,14 @@ class CustomRulesTest extends TestCase
     /** @test */
     public function valid_role_passes_for_admin()
     {
-        $rule = new ValidRoleForUser();
+        $rule = new ValidRoleForUser;
         $this->assertTrue($rule->passes('role', 'ADMIN'));
     }
 
     /** @test */
     public function valid_role_passes_for_maker()
     {
-        $rule = new ValidRoleForUser();
+        $rule = new ValidRoleForUser;
         $this->assertTrue($rule->passes('role', 'MAKER'));
     }
 
@@ -116,7 +116,7 @@ class CustomRulesTest extends TestCase
             'KOORDINATOR_BIDANG',
         ];
 
-        $rule = new ValidRoleForUser();
+        $rule = new ValidRoleForUser;
         foreach ($validRoles as $role) {
             $this->assertTrue($rule->passes('role', $role), "Role {$role} should be valid");
         }
@@ -125,21 +125,21 @@ class CustomRulesTest extends TestCase
     /** @test */
     public function valid_role_fails_for_invalid_role()
     {
-        $rule = new ValidRoleForUser();
+        $rule = new ValidRoleForUser;
         $this->assertFalse($rule->passes('role', 'SUPER_ADMIN'));
     }
 
     /** @test */
     public function valid_role_fails_for_empty_string()
     {
-        $rule = new ValidRoleForUser();
+        $rule = new ValidRoleForUser;
         $this->assertFalse($rule->passes('role', ''));
     }
 
     /** @test */
     public function valid_role_returns_correct_message()
     {
-        $rule = new ValidRoleForUser();
+        $rule = new ValidRoleForUser;
         $this->assertStringContainsString('tidak valid', $rule->message());
     }
 }

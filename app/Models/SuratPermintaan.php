@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Services\AuditLogService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -10,10 +9,31 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class SuratPermintaan extends Model
 {
     protected $table = 'surat_permintaan';
+
     protected $primaryKey = 'no_surat';
+
     public $incrementing = false;
+
     protected $keyType = 'string';
-    protected $guarded = [];
+
+    protected $fillable = [
+        'no_surat',
+        'tanggal',
+        'jenis_permintaan',
+        'kode_project',
+        'kode_area',
+        'sumber_dana',
+        'bank_tujuan',
+        'no_rekening_tujuan',
+        'nama_rekening_tujuan',
+        'total_nominal',
+        'status_surat',
+        'posisi_saat_ini',
+        'id_maker',
+        'keterangan_checker',
+        'updated_at',
+    ];
+
     public $timestamps = false;
 
     protected $casts = [
@@ -93,7 +113,7 @@ class SuratPermintaan extends Model
 
     public function getTotalNominalFormattedAttribute(): string
     {
-        return 'Rp ' . number_format((float) $this->total_nominal, 0, ',', '.');
+        return 'Rp '.number_format((float) $this->total_nominal, 0, ',', '.');
     }
 
     public function getStatusBadgeAttribute(): string
@@ -105,7 +125,7 @@ class SuratPermintaan extends Model
             'Disbursed' => '<span class="badge bg-primary">Disbursed</span>',
             'Revisi' => '<span class="badge bg-secondary">Revisi</span>',
             'Rejected' => '<span class="badge bg-danger">Rejected</span>',
-            default => '<span class="badge bg-light text-dark">' . e($this->status_surat) . '</span>',
+            default => '<span class="badge bg-light text-dark">'.e($this->status_surat).'</span>',
         };
     }
 
@@ -123,6 +143,7 @@ class SuratPermintaan extends Model
         if ($role === 'ADMIN') {
             return true;
         }
+
         return $this->posisi_saat_ini === $role;
     }
 
@@ -139,7 +160,7 @@ class SuratPermintaan extends Model
         ]);
     }
 
-    public function markAsRejected(string $alasan = null): void
+    public function markAsRejected(?string $alasan = null): void
     {
         $this->update([
             'status_surat' => 'Rejected',
@@ -148,7 +169,7 @@ class SuratPermintaan extends Model
         ]);
     }
 
-    public function markAsRevised(string $alasan = null, string $byRole = null): void
+    public function markAsRevised(?string $alasan = null, ?string $byRole = null): void
     {
         $this->update([
             'status_surat' => 'Revisi',

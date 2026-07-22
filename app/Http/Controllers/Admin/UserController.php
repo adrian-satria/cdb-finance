@@ -3,9 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Models\Area;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
@@ -13,12 +14,14 @@ class UserController extends Controller
     public function index()
     {
         $users = User::paginate(20);
+
         return view('admin.user.index', compact('users'));
     }
 
     public function create()
     {
         $areas = Area::all(); // Mengambil data unit kerja/wilayah tugas
+
         return view('admin.user.create', compact('areas'));
     }
 
@@ -27,7 +30,7 @@ class UserController extends Controller
         $request->validate([
             'nama' => 'required|string|max:255',
             'username' => 'required|string|max:50|unique:users,username',
-            'password' => 'required|string|min:4',
+            'password' => ['required', 'string', 'min:8', 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/'],
         ]);
 
         $user = User::create([
@@ -35,12 +38,11 @@ class UserController extends Controller
             'nama' => $request->nama,
             'username' => $request->username,
             'password' => Hash::make($request->password),
-            'email' => $request->username . '@cdbfinance.test',
+            'email' => $request->username.'@cdbfinance.test',
         ]);
 
-        // Set id_user = id for compatibility with legacy code
-        $user->id_user = $user->id;
-        $user->save();
+        $insertId = $user->getKey();
+        DB::table('users')->where('id', $insertId)->update(['id_user' => $insertId]);
 
         return redirect()->route('admin.user.index')->with('success', 'User baru berhasil didaftarkan!');
     }
@@ -48,6 +50,7 @@ class UserController extends Controller
     public function edit($id)
     {
         $user = User::findOrFail($id);
+
         return view('admin.user.edit', compact('user'));
     }
 
@@ -57,14 +60,16 @@ class UserController extends Controller
 
         $request->validate([
             'nama' => 'required|string|max:255',
-            'username' => 'required|string|max:50|unique:users,username,' . $user->id_user . ',id_user',
+            'username' => 'required|string|max:50|unique:users,username,'.$user->id_user.',id_user',
         ]);
 
         $user->nama = $request->nama;
         $user->username = $request->username;
 
-        // Jika password diisi baru, maka update. Jika kosong, pakai password lama.
         if ($request->filled('password')) {
+            $request->validate([
+                'password' => ['required', 'string', 'min:8', 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/'],
+            ]);
             $user->password = Hash::make($request->password);
         }
 

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class SuratPermintaanFiles extends Model
 {
     protected $table = 'surat_permintaan_files';
+
     public $timestamps = false;
 
     protected $fillable = [

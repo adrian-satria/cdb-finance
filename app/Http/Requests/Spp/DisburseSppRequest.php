@@ -2,13 +2,14 @@
 
 namespace App\Http\Requests\Spp;
 
+use App\Support\RoleHelper;
 use Illuminate\Foundation\Http\FormRequest;
 
 class DisburseSppRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return in_array(session('role'), ['KASIR_PUSAT', 'ADMIN'], true);
+        return RoleHelper::isGlobal(session('role'));
     }
 
     public function rules(): array

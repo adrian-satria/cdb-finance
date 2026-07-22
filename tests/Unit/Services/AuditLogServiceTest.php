@@ -2,11 +2,11 @@
 
 namespace Tests\Unit\Services;
 
-use Tests\TestCase;
 use App\Services\AuditLogService;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Tests\TestCase;
 
 class AuditLogServiceTest extends TestCase
 {

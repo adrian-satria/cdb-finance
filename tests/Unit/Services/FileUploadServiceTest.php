@@ -2,11 +2,11 @@
 
 namespace Tests\Unit\Services;
 
-use Tests\TestCase;
 use App\Services\FileUploadService;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Tests\TestCase;
 
 class FileUploadServiceTest extends TestCase
 {
@@ -17,7 +17,7 @@ class FileUploadServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new FileUploadService();
+        $this->service = new FileUploadService;
     }
 
     // ==========================================

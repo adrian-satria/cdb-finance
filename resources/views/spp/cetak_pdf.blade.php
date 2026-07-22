@@ -121,18 +121,17 @@
             background-color: #fefefe;
         }
 
-        /* === FORMAT TANDA TANGAN DARI KODE LAMA === */
+        /* === FORMAT TANDA TANGAN === */
         .ttd-table { 
             width: 100%; 
             margin-top: 30px; 
             border-collapse: collapse; 
         }
         .ttd-cell { 
-            width: 33.33%; 
             text-align: center; 
             vertical-align: top; 
             height: 120px; 
-            font-size: 11.5px; 
+            font-size: 11px; 
         }
         .signature-img { 
             height: 55px; 
@@ -141,6 +140,8 @@
             margin-left: auto;
             margin-right: auto;
         }
+        .ttd-label { font-weight: bold; font-size: 11px; margin-bottom: 2px; }
+        .ttd-role { font-size: 9px; color: #666; }
     </style>
 </head>
 <body>
@@ -186,14 +187,9 @@
             <td class="border-bottom" style="padding-bottom: 6px;">
                 <table class="section-table">
                     <tr>
-                        <td width="25%">Nama Rekening</td>
+                        <td width="25%">Sumber Dana</td>
                         <td width="2%">:</td>
                         <td width="73%">{{ $surat->sumber_dana ?? '-' }}</td>
-                    </tr>
-                    <tr>
-                        <td>Bank / No. Rekening</td>
-                        <td>:</td>
-                        <td>{{ $surat->bank_sumber ?? '-' }} / {{ $surat->no_rekening_sumber ?? '-' }}</td>
                     </tr>
                 </table>
             </td>
@@ -213,7 +209,7 @@
                     <tr>
                         <td>Bank / No. Rekening</td>
                         <td>:</td>
-                        <td>{{ $surat->bank_tujuan ?? '-' }} / {{ $surat->no_rekening_tujuan ?? '-' }}</td>
+                        <td>{{ $surat->bank_tujuan ?? '-' }} / {{ ($surat->no_rekening_tujuan ?? null) ? '****' . substr($surat->no_rekening_tujuan, -4) : '-' }}</td>
                     </tr>
                 </table>
             </td>
@@ -254,7 +250,7 @@
         <tr>
             <td class="terbilang-box">
                 @php
-                    function terbilang($angka) {
+                    if (!function_exists('terbilang')) { function terbilang($angka) {
                         $angka = abs($angka);
                         $baca = array("", "satu", "dua", "tiga", "empat", "lima", "enam", "tujuh", "delapan", "sembilan", "sepuluh", "sebelas");
                         $terbilang = "";
@@ -267,7 +263,7 @@
                         elseif ($angka < 1000000) { $terbilang = terbilang((int)($angka / 1000)) . " ribu" . terbilang($angka % 1000); }
                         elseif ($angka < 1000000000) { $terbilang = terbilang((int)($angka / 1000000)) . " juta" . terbilang($angka % 1000000); }
                         return $terbilang;
-                    }
+                    } }
                     $nominal_total = $surat->total_nominal ?? 0;
                     $teks_terbilang = "#" . trim(terbilang($nominal_total)) . " rupiah #";
                 @endphp
@@ -278,43 +274,34 @@
 
     <p style="font-size: 11px; font-style: italic; color: #666; margin-bottom: 20px;">Status Terakhir Dokumen di Sistem: <strong>{{ $surat->status_surat }}</strong> (Aliran Terakhir: {{ $surat->posisi_saat_ini }})</p>
 
+    @if(!empty($ttd) && is_array($ttd))
+    @php $cols = 3; @endphp
     <table class="ttd-table">
+        @foreach(array_chunk($ttd, $cols) as $chunk)
         <tr>
-            <td class="ttd-cell">
-                Diajukan Oleh,<br>
-                @if(isset($ttd['maker']) && $ttd['maker']->img_base64)
-                    <img src="{{ $ttd['maker']->img_base64 }}" class="signature-img"><br>
-                    ( <strong>{{ $ttd['maker']->nama_lengkap }}</strong> )
+            @foreach($chunk as $sig)
+            @if($sig && is_array($sig))
+            <td class="ttd-cell" style="width: {{ 100 / $cols }}%;">
+                <div class="ttd-label">{{ $sig['label'] ?? '' }}</div>
+                @if(!empty($sig['img_base64']))
+                    <img src="{{ $sig['img_base64'] }}" class="signature-img"><br>
                 @else
                     <br><br><br><br>
-                    ( ____________________ )
                 @endif
-                <br><span style="font-size: 9px; color: #666;">Staff Maker</span>
+                ( <strong>{{ $sig['nama_lengkap'] ?? '-' }}</strong> )
+                <br><span class="ttd-role">{{ $sig['role_detail'] ?? '' }}</span>
             </td>
-            <td class="ttd-cell">
-                Diperiksa & Disetujui,<br>
-                @if(isset($ttd['checker']) && $ttd['checker']->img_base64)
-                    <img src="{{ $ttd['checker']->img_base64 }}" class="signature-img"><br>
-                    ( <strong>{{ $ttd['checker']->nama_lengkap }}</strong> )
-                @else
-                    <br><br><br><br>
-                    ( ____________________ )
-                @endif
-                <br><span style="font-size: 9px; color: #666;">Manager / Direktur</span>
-            </td>
-            <td class="ttd-cell">
-                Dicairkan Oleh,<br>
-                @if(isset($ttd['cashier']) && $ttd['cashier']->img_base64)
-                    <img src="{{ $ttd['cashier']->img_base64 }}" class="signature-img"><br>
-                    ( <strong>{{ $ttd['cashier']->nama_lengkap }}</strong> )
-                @else
-                    <br><br><br><br>
-                    ( ____________________ )
-                @endif
-                <br><span style="font-size: 9px; color: #666;">Kasir Pusat</span>
-            </td>
+            @endif
+            @endforeach
+            @if(count($chunk) < $cols)
+                @for($i = count($chunk); $i < $cols; $i++)
+                <td class="ttd-cell" style="width: {{ 100 / $cols }}%;">&nbsp;</td>
+                @endfor
+            @endif
         </tr>
+        @endforeach
     </table>
+    @endif
 
 </body>
 </html>

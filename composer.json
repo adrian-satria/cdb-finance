@@ -1,8 +1,8 @@
 {
-    "name": "laravel/laravel",
+    "name": "cdb-finance/cdb-finance",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "description": "CDB Finance - SPP Management System (B-SMART)",
+    "keywords": ["cdb", "finance", "spp", "b-smart"],
     "license": "MIT",
     "require": {
         "php": "^8.2",

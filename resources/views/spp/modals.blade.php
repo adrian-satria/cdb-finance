@@ -1,11 +1,11 @@
 <div class="modal fade" id="modalValidasi" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0" style="border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.08);">
+        <div class="modal-content modal-content-bsmart">
             <div class="modal-header border-0 px-4 pt-4">
                 <h5 class="fw-bold text-dark m-0"><i class="fa-solid fa-shield-check text-primary me-2"></i>Otorisasi Pengajuan SPP</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="formValidasi" method="POST" action="" enctype="multipart/form-data">
+            <form id="formValidasi" method="POST" action="" enctype="multipart/form-data" data-loading>
                 @csrf
                 <div class="modal-body px-4">
                     <div class="p-3 bg-light rounded-3 mb-3" style="font-size: 13px;">
@@ -53,7 +53,7 @@
 
 <div class="modal fade" id="modalDetailSpp" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content border-0" style="border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+        <div class="modal-content card-bsmart">
             <div class="modal-header border-0 pb-0 pt-4 px-4">
                 <div>
                     <h5 class="modal-title fw-bold text-dark m-0" id="detailNoSurat">Rincian Pengajuan</h5>
@@ -73,11 +73,10 @@
                             </tr>
                         </thead>
                         <tbody id="loadingRow">
-                            <tr>
-                                <td colspan="4" class="text-center py-4 text-muted">
-                                    <i class="fa-solid fa-spinner fa-spin me-2"></i> Mengambil rincian berkas dari server...
-                                </td>
-                            </tr>
+                            <tr><td colspan="4" class="py-3"><div class="skeleton-cell" style="width:40%"></div></td></tr>
+                            <tr><td colspan="4" class="py-3"><div class="skeleton-cell" style="width:70%"></div></td></tr>
+                            <tr><td colspan="4" class="py-3"><div class="skeleton-cell" style="width:55%"></div></td></tr>
+                            <tr><td colspan="4" class="py-3"><div class="skeleton-cell" style="width:30%"></div></td></tr>
                         </tbody>
                         <tbody id="detailItemsBody" style="font-size: 13px;"></tbody>
                         <tfoot style="border-top: 2px solid #e1e3e5; font-weight: 700;">
@@ -98,7 +97,7 @@
 
 <div class="modal fade" id="modalPreviewSpp" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-fullscreen-md-down">
-        <div class="modal-content border-0" style="border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+        <div class="modal-content card-bsmart">
             <div class="modal-header border-0 pb-0 pt-4 px-4">
                 <div>
                     <h5 class="modal-title fw-bold text-dark m-0">Preview Hasil Cetak SPP</h5>
@@ -108,10 +107,13 @@
             </div>
             <div class="modal-body p-0" style="min-height: 72vh;">
                 <div id="previewFrameWrapper" class="position-relative" style="min-height: 72vh;">
-                    <div id="previewLoading" class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-white" style="z-index: 10;">
-                        <div class="text-center text-secondary">
-                            <i class="fa-solid fa-spinner fa-spin fs-3 mb-2"></i>
-                            <div>Memuat preview SPP dari server...</div>
+                    <div id="previewLoading" class="position-absolute top-0 start-0 w-100 h-100 bg-white p-5" style="z-index: 10;">
+                        <div class="p-4">
+                            <div class="skeleton-cell" style="width:60%;height:24px;margin-bottom:24px"></div>
+                            <div class="skeleton-cell" style="width:90%;height:200px;margin-bottom:16px"></div>
+                            <div class="skeleton-cell" style="width:45%;height:16px;margin-bottom:12px"></div>
+                            <div class="skeleton-cell" style="width:75%;height:16px;margin-bottom:12px"></div>
+                            <div class="skeleton-cell" style="width:30%;height:16px"></div>
                         </div>
                     </div>
                     <iframe id="previewFrame" src="" frameborder="0" class="w-100 h-100" style="min-height: 72vh;"></iframe>
@@ -127,22 +129,44 @@
     </div>
 </div>
 
+<div class="modal fade" id="modalCairkan" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content card-bsmart">
+            <div class="modal-body text-center p-4">
+                <div class="mb-3">
+                    <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-success-subtle" style="width: 64px; height: 64px;">
+                        <i class="fa-solid fa-money-bill-transfer text-success fs-3"></i>
+                    </span>
+                </div>
+                <h5 class="fw-bold text-dark mb-2">Konfirmasi Pencairan</h5>
+                <p class="text-muted small mb-3" id="cairkanInfo">Apakah Anda yakin dana ini sudah ditransfer via e-banking?</p>
+                <div class="bg-light rounded-3 p-3 mb-3 text-start">
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span class="text-secondary">No. Surat</span>
+                        <span class="fw-bold text-dark" id="cairkanNoSurat">-</span>
+                    </div>
+                    <div class="d-flex justify-content-between small">
+                        <span class="text-secondary">Total Dana</span>
+                        <span class="fw-bold text-primary" id="cairkanNominal">Rp 0</span>
+                    </div>
+                </div>
+                <form id="formCairkan" method="POST" action="">
+                    @csrf
+                    <input type="hidden" name="no_surat" id="cairkanInputSurat">
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-light w-50 fw-semibold" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-success w-50 fw-semibold">
+                            <i class="fa-solid fa-check me-1"></i> Ya, Cairkan
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 @push('scripts')
 <script>
-    function bukaModalValidasi(id, noSurat, nominal) {
-        document.getElementById('formValidasi').action = '/spp/validasi?no_surat=' + encodeURIComponent(id);
-        document.getElementById('modalNoSurat').innerText = noSurat;
-        document.getElementById('modalTotalNominal').innerText = 'Rp ' + nominal;
-
-        document.getElementById('selectAksi').value = 'approve';
-        document.getElementById('textAlasan').required = false;
-        document.getElementById('textAlasan').placeholder = "Masukkan alasan jika menolak, atau catatan opsional...";
-        document.getElementById('labelAlasan').innerText = "Catatan / Alasan Kelayakan";
-
-        var myModal = new bootstrap.Modal(document.getElementById('modalValidasi'));
-        myModal.show();
-    }
-
     function cekKewajibanAlasan() {
         const aksi = document.getElementById('selectAksi').value;
         const textAlasan = document.getElementById('textAlasan');
@@ -158,5 +182,34 @@
             labelAlasan.innerText = "Catatan / Alasan Kelayakan";
         }
     }
+
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-action="cairkan-spp"]');
+        var noSurat, nominal;
+
+        if (btn) {
+            noSurat = btn.getAttribute('data-no-surat');
+            nominal = parseInt(btn.getAttribute('data-total-nominal') || 0);
+            document.getElementById('formCairkan').action = '/spp/cairkan';
+            document.getElementById('cairkanInputSurat').value = noSurat;
+            document.getElementById('cairkanNoSurat').innerText = noSurat;
+            document.getElementById('cairkanNominal').innerText = 'Rp ' + nominal.toLocaleString('id-ID');
+            new bootstrap.Modal(document.getElementById('modalCairkan')).show();
+            return;
+        }
+
+        btn = e.target.closest('[data-action="validasi-spp"]');
+        if (btn) {
+            noSurat = btn.getAttribute('data-no-surat');
+            nominal = parseInt(btn.getAttribute('data-total-nominal') || 0);
+            document.getElementById('formValidasi').action = '/spp/validasi?no_surat=' + encodeURIComponent(noSurat);
+            document.getElementById('modalNoSurat').innerText = noSurat;
+            document.getElementById('modalTotalNominal').innerText = 'Rp ' + nominal.toLocaleString('id-ID');
+            document.getElementById('selectAksi').value = 'approve';
+            cekKewajibanAlasan();
+            new bootstrap.Modal(document.getElementById('modalValidasi')).show();
+            return;
+        }
+    });
 </script>
 @endpush

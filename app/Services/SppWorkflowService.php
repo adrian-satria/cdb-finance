@@ -16,23 +16,23 @@ class SppWorkflowService
     /**
      * Determine the initial approval position based on project code.
      *
-     * @param string $kodeProject
      * @return string Initial role/position
      */
     public function determineInitialPosition(string $kodeProject): string
     {
-        return $this->config['initial_positions'][$kodeProject] 
+        return $this->config['initial_positions'][$kodeProject]
             ?? $this->config['default_initial_position'];
     }
 
     /**
      * Get the next position in workflow based on current role, project, nominal, and action.
      *
-     * @param string $currentRole Current approver role
-     * @param string $kodeProject Project code
-     * @param string $nominal SPP nominal amount (string for bcmath precision)
-     * @param string $action Action taken: 'approve', 'revise', 'reject'
+     * @param  string  $currentRole  Current approver role
+     * @param  string  $kodeProject  Project code
+     * @param  string  $nominal  SPP nominal amount (string for bcmath precision)
+     * @param  string  $action  Action taken: 'approve', 'revise', 'reject'
      * @return array ['next' => next_role, 'status' => new_status]
+     *
      * @throws Exception if workflow unmapped
      */
     public function getNextPosition(
@@ -53,7 +53,7 @@ class SppWorkflowService
         $transitions = $this->config['transitions'][$flowType] ?? [];
 
         // Check if role exists in transitions
-        if (!isset($transitions[$currentRole])) {
+        if (! isset($transitions[$currentRole])) {
             throw new Exception(
                 "WORKFLOW UNMAPPED: Role {$currentRole} tidak punya transisi {$action} pada flow {$flowType}."
             );
@@ -70,7 +70,7 @@ class SppWorkflowService
 
                 if ($isOverThreshold && isset($roleTransitions['approve_over_threshold'])) {
                     return $roleTransitions['approve_over_threshold'];
-                } elseif (!$isOverThreshold && isset($roleTransitions['approve_under_threshold'])) {
+                } elseif (! $isOverThreshold && isset($roleTransitions['approve_under_threshold'])) {
                     return $roleTransitions['approve_under_threshold'];
                 }
             }
@@ -90,8 +90,8 @@ class SppWorkflowService
     /**
      * Validate if workflow transition is allowed.
      *
-     * @param object $surat SPP object with posisi_saat_ini property
-     * @param string $currentRole Role attempting to approve
+     * @param  object  $surat  SPP object with posisi_saat_ini property
+     * @param  string  $currentRole  Role attempting to approve
      * @return bool True if valid, false otherwise
      */
     public function validateWorkflowTransition(object $surat, string $currentRole): bool
@@ -108,7 +108,6 @@ class SppWorkflowService
     /**
      * Get workflow type based on project code.
      *
-     * @param string $kodeProject
      * @return string Workflow type name
      */
     protected function getWorkflowType(string $kodeProject): string
@@ -126,7 +125,6 @@ class SppWorkflowService
     /**
      * Get all possible roles for a workflow type.
      *
-     * @param string $kodeProject
      * @return array List of roles in this workflow
      */
     public function getWorkflowRoles(string $kodeProject): array
@@ -139,14 +137,11 @@ class SppWorkflowService
 
     /**
      * Check if a role is part of the workflow for given project.
-     *
-     * @param string $role
-     * @param string $kodeProject
-     * @return bool
      */
     public function isRoleInWorkflow(string $role, string $kodeProject): bool
     {
         $workflowRoles = $this->getWorkflowRoles($kodeProject);
+
         return in_array($role, $workflowRoles, true);
     }
 
@@ -162,13 +157,11 @@ class SppWorkflowService
 
     /**
      * Check if nominal requires director approval.
-     *
-     * @param string $nominal
-     * @return bool
      */
     public function requiresDirectorApproval(string $nominal): bool
     {
         $threshold = $this->config['director_approval_threshold'];
+
         return bccomp($nominal, $threshold, 2) === 1;
     }
 }

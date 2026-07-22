@@ -2,11 +2,10 @@
 
 namespace Tests\Unit\Observers;
 
-use Tests\TestCase;
 use App\Models\SuratPermintaan;
-use App\Services\AuditLogService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
 
 class SppObserverTest extends TestCase
 {

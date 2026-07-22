@@ -8,31 +8,36 @@ use Illuminate\Support\Facades\Hash;
 
 class AdminUserSeeder extends Seeder
 {
+    const ADMIN_USERNAME = 'admin_keuangan';
+
     public function run(): void
     {
-        $username = 'admin_keuangan';
-        
+        $username = self::ADMIN_USERNAME;
+        $generatePassword = bin2hex(random_bytes(6)) . 'Aa1';
+
         $user = DB::table('users')->where('username', $username)->first();
-        
-        if (!$user) {
+
+        if (! $user) {
             $id_user = DB::table('users')->insertGetId([
                 'nama' => 'Adrian Admin',
                 'username' => $username,
-                'password' => Hash::make('admin123'),
+                'password' => Hash::make($generatePassword),
             ]);
         } else {
             $id_user = $user->id_user;
             DB::table('users')->where('id_user', $id_user)->update([
-                'password' => Hash::make('admin123')
+                'password' => Hash::make($generatePassword),
             ]);
         }
 
+        echo "[!] DEFAULT ADMIN PASSWORD (change immediately): " . $generatePassword . PHP_EOL;
+
         // Sekarang menyertakan kolom 'role' demi keamanan hak otorisasi sistem
         DB::table('user_access')->updateOrInsert(
-            ['id_user' => $id_user], 
+            ['id_user' => $id_user],
             [
-                'jabatan' => 'ADMIN',     
-                'role' => 'ADMIN', 
+                'jabatan' => 'ADMIN',
+                'role' => 'ADMIN',
                 'kode_area' => 'PUSAT',
             ]
         );

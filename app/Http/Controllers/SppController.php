@@ -2,23 +2,25 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Spp\DisburseSppRequest;
 use App\Http\Requests\Spp\StoreSppRequest;
 use App\Http\Requests\Spp\ValidateSppRequest;
-use App\Http\Requests\Spp\DisburseSppRequest;
-use Illuminate\Http\Request;
-use App\Models\SuratPermintaan;
-use App\Models\Project;
 use App\Models\Area;
+use App\Models\Project;
 use App\Models\SumberDana;
+use App\Models\SuratPermintaan;
+use App\Services\AuditLogService;
+use App\Services\BudgetValidationService;
+use App\Services\FileUploadService;
+use App\Services\NotificationService;
+use App\Services\SppNumberGeneratorService;
+use App\Services\SppWorkflowService;
+use App\Support\RoleHelper;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Barryvdh\DomPDF\Facade\Pdf;
-use App\Services\NotificationService;
-use App\Services\SppWorkflowService;
-use App\Services\BudgetValidationService;
-use App\Services\SppNumberGeneratorService;
-use App\Services\FileUploadService;
 
 class SppController extends Controller
 {
@@ -26,7 +28,8 @@ class SppController extends Controller
         protected SppWorkflowService $workflowService,
         protected BudgetValidationService $budgetService,
         protected SppNumberGeneratorService $numberService,
-        protected FileUploadService $fileService
+        protected FileUploadService $fileService,
+        protected NotificationService $notificationService
     ) {}
 
     // =========================================================================
@@ -53,8 +56,8 @@ class SppController extends Controller
             return DB::transaction(function () use ($request) {
                 // 1. Validate Budget Ceiling & Get Total Nominal
                 $validation = $this->budgetService->lockAndValidateMultiple($request->items);
-                
-                if (!$validation->isValid) {
+
+                if (! $validation->isValid) {
                     throw new \Exception($validation->errorMessage);
                 }
 
@@ -105,12 +108,12 @@ class SppController extends Controller
                 // Note: Audit log and SppHistory are now handled automatically by SppObserver
 
                 // 7. Send Notification
-                NotificationService::sendToRole(
-                    $posisiAwal, 
+                $this->notificationService->sendToRole(
+                    $posisiAwal,
                     NotificationService::TYPE_NEW_SPP,
                     "SPP Baru - {$nomorBaru}",
-                    "SPP baru senilai Rp " . number_format($totalNominal, 0, ',', '.') . " dari project {$request->kode_project} membutuhkan persetujuan Anda.",
-                    'SPP', 
+                    'SPP baru senilai Rp '.number_format($totalNominal, 0, ',', '.')." dari project {$request->kode_project} membutuhkan persetujuan Anda.",
+                    'SPP',
                     $nomorBaru
                 );
 
@@ -136,17 +139,15 @@ class SppController extends Controller
         $userProject = session('kode_project');
         $selectedProject = $request->query('kode_project');
 
-        $projectScopedRoles = ['FINANCE_PROJECT', 'PROJECT_MANAGER', 'MANAGER_KEUANGAN', 'KOORDINATOR_KEUANGAN', 'KOORDINATOR_PK', 'KOORDINATOR_TC', 'KOORDINATOR_DIKLAT', 'KOORDINATOR_KLINIK', 'KOORDINATOR_BATRA', 'KOORDINATOR_BIDANG'];
-
-        if (empty($selectedProject) && !empty($userProject) && $userProject !== 'all' && in_array($role, $projectScopedRoles)) {
+        if (empty($selectedProject) && ! empty($userProject) && $userProject !== 'all' && RoleHelper::isProjectScoped($role)) {
             $selectedProject = $userProject;
         }
 
         $scopeQuery = DB::table('surat_permintaan');
 
-        if (in_array($role, ['MAKER', 'AREA_MANAGER'])) {
+        if (RoleHelper::isStaffArea($role)) {
             $scopeQuery->where('kode_area', $kodeArea);
-        } elseif (in_array($role, $projectScopedRoles)) {
+        } elseif (RoleHelper::isProjectScoped($role)) {
             if ($userProject !== null && $userProject !== '' && $userProject !== 'all') {
                 $scopeQuery->where('kode_project', $userProject);
             }
@@ -154,15 +155,18 @@ class SppController extends Controller
 
         $query = clone $scopeQuery;
 
-        if (!empty($selectedProject) && $selectedProject !== 'all') {
-            if (in_array($role, $projectScopedRoles) && $userProject !== 'all' && $selectedProject !== $userProject) {
+        if (! empty($selectedProject) && $selectedProject !== 'all') {
+            if (RoleHelper::isProjectScoped($role) && $userProject !== 'all' && $selectedProject !== $userProject) {
                 $selectedProject = $userProject;
             }
 
             $query->where('kode_project', $selectedProject);
         }
 
-        $data = $query->orderBy('created_at', 'desc')->paginate(20);
+        $sortColumns = ['no_surat', 'kode_project', 'tanggal', 'kode_area', 'total_nominal', 'status_surat', 'created_at'];
+        $sort = in_array($request->query('sort'), $sortColumns) ? $request->query('sort') : 'created_at';
+        $direction = strtolower($request->query('direction', 'desc')) === 'asc' ? 'asc' : 'desc';
+        $data = $query->orderBy($sort, $direction)->paginate(20);
 
         $sppNumbers = $data->pluck('no_surat');
         $allFiles = DB::table('surat_permintaan_files')
@@ -172,14 +176,15 @@ class SppController extends Controller
 
         $data->transform(function ($spp) use ($allFiles) {
             $files = $allFiles->get($spp->no_surat, collect());
-            $spp->files_maker   = $files->where('kategori', 'MAKER')->values();
+            $spp->files_maker = $files->where('kategori', 'MAKER')->values();
             $spp->files_checker = $files->where('kategori', 'CHECKER')->values();
+
             return $spp;
         });
 
-        if ($role === 'ADMIN' || ($userProject === null || $userProject === '' || $userProject === 'all')) {
+        if (RoleHelper::isGlobal($role) || ($userProject === null || $userProject === '' || $userProject === 'all')) {
             $projects = Project::orderBy('kode_project')->get();
-        } elseif (in_array($role, $projectScopedRoles) && $userProject !== null && $userProject !== '' && $userProject !== 'all') {
+        } elseif (RoleHelper::isProjectScoped($role) && $userProject !== null && $userProject !== '' && $userProject !== 'all') {
             $projects = Project::where('kode_project', $userProject)->get();
         } else {
             $allowedProjectCodes = $scopeQuery->distinct()->pluck('kode_project')->toArray();
@@ -196,21 +201,24 @@ class SppController extends Controller
     {
         $role = session('role');
 
-        if (!in_array($role, ['ADMIN', 'MANAGER_KEUANGAN'], true)) {
+        if (! in_array($role, ['ADMIN', 'MANAGER_KEUANGAN'], true)) {
             abort(403, 'Akses Otoritas Ditolak.');
         }
 
         $status = $request->query('status');
-        if (!in_array($status, [null, '', 'Pending', 'Approved', 'Rejected'], true)) {
+        if (! in_array($status, [null, '', 'Pending', 'Approved', 'Rejected'], true)) {
             $status = null;
         }
 
         $query = DB::table('surat_permintaan');
-        if (!empty($status)) {
+        if (! empty($status)) {
             $query->where('status_surat', $status);
         }
 
-        $data = $query->orderBy('created_at', 'desc')->paginate(20);
+        $sortColumns = ['no_surat', 'kode_project', 'tanggal', 'kode_area', 'total_nominal', 'status_surat', 'created_at'];
+        $sort = in_array($request->query('sort'), $sortColumns) ? $request->query('sort') : 'created_at';
+        $direction = strtolower($request->query('direction', 'desc')) === 'asc' ? 'asc' : 'desc';
+        $data = $query->orderBy($sort, $direction)->paginate(20);
 
         $sppNumbers = $data->pluck('no_surat');
         $allFiles = DB::table('surat_permintaan_files')
@@ -220,8 +228,9 @@ class SppController extends Controller
 
         $data->transform(function ($spp) use ($allFiles) {
             $files = $allFiles->get($spp->no_surat, collect());
-            $spp->files_maker   = $files->where('kategori', 'MAKER')->values();
+            $spp->files_maker = $files->where('kategori', 'MAKER')->values();
             $spp->files_checker = $files->where('kategori', 'CHECKER')->values();
+
             return $spp;
         });
 
@@ -236,7 +245,7 @@ class SppController extends Controller
         $currentRole = session('role');
         $id = $request->query('no_surat') ?? $request->input('no_surat');
 
-        if (!$id) {
+        if (! $id) {
             return redirect()->back()->with('error', 'Nomor SPP tidak ditemukan untuk validasi.');
         }
 
@@ -244,13 +253,13 @@ class SppController extends Controller
             return DB::transaction(function () use ($request, $currentRole, $id) {
                 $surat = SuratPermintaan::where('no_surat', $id)->lockForUpdate()->first();
 
-                if (!$surat) {
+                if (! $surat) {
                     throw new \Exception('Data pengajuan SPP tidak ditemukan!');
                 }
 
                 $effectiveRole = ($currentRole === 'ADMIN') ? $surat->posisi_saat_ini : $currentRole;
 
-                if (!$this->workflowService->validateWorkflowTransition($surat, $effectiveRole)) {
+                if (! $this->workflowService->validateWorkflowTransition($surat, $effectiveRole)) {
                     throw new \Exception("WORKFLOW VIOLATION: Berkas ini sedang berada dalam otoritas [{$surat->posisi_saat_ini}], bukan di meja kerja Anda!");
                 }
 
@@ -288,30 +297,30 @@ class SppController extends Controller
                     $notifTitle = $request->aksi === 'approve' ? "Perlu Persetujuan - {$id}" : "Revisi - {$id}";
 
                     if ($result['next'] === 'MAKER') {
-                        NotificationService::sendToUser(
+                        $this->notificationService->sendToUser(
                             $surat->id_maker, $notifType, $notifTitle,
                             "SPP {$id} direvisi oleh {$effectiveRole}. Silakan perbaiki dan kirim ulang.",
                             'SPP', $id
                         );
                     } else {
-                        NotificationService::sendToRole(
+                        $this->notificationService->sendToRole(
                             $result['next'], $notifType, $notifTitle,
                             "SPP {$id} telah disetujui oleh {$effectiveRole}. Sekarang menunggu persetujuan {$result['next']}.",
                             'SPP', $id
                         );
                     }
                 } elseif ($request->aksi === 'reject') {
-                    NotificationService::sendToUser(
+                    $this->notificationService->sendToUser(
                         $surat->id_maker, NotificationService::TYPE_REJECTED,
                         "Ditolak - {$id}",
-                        "SPP {$id} ditolak oleh {$effectiveRole}. Alasan: " . ($request->alasan ?? '-'),
+                        "SPP {$id} ditolak oleh {$effectiveRole}. Alasan: ".($request->alasan ?? '-'),
                         'SPP', $id
                     );
                 }
 
                 $feedbackSuccess = ($request->aksi == 'approve')
                     ? "Pengajuan berhasil diproses! Aliran dokumen diteruskan ke: {$result['next']}."
-                    : "Pengajuan SPP resmi ditolak.";
+                    : 'Pengajuan SPP resmi ditolak.';
 
                 return redirect('/spp')->with('success', $feedbackSuccess);
             });
@@ -321,6 +330,7 @@ class SppController extends Controller
                 'trace' => $e->getTraceAsString(),
                 'no_surat' => $id ?? null,
             ]);
+
             return redirect()->back()->with('error', $e->getMessage() ?: 'Gagal memproses validasi. Silakan coba kembali.');
         }
     }
@@ -340,7 +350,7 @@ class SppController extends Controller
                     ->lockForUpdate()
                     ->first();
 
-                if (!$surat) {
+                if (! $surat) {
                     throw new \Exception('⚠️ PERINGATAN IDEMPOTENCY: Berkas ini sudah dicairkan sebelumnya atau status transaksi tidak valid!');
                 }
 
@@ -349,6 +359,20 @@ class SppController extends Controller
                     ->get();
 
                 foreach ($items as $item) {
+                    $budget = DB::table('master_budget')
+                        ->where('kode_budget', $item->kode_budget)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (! $budget) {
+                        throw new \Exception("Budget {$item->kode_budget} tidak ditemukan.");
+                    }
+
+                    $newTerserap = bcadd((string) $budget->terserap, (string) $item->nominal, 2);
+                    if (bccomp($newTerserap, (string) $budget->alokasi_dana, 2) === 1) {
+                        throw new \Exception("Budget {$item->kode_budget} melebihi alokasi (Rp " . number_format($budget->alokasi_dana, 0, ',', '.') . ").");
+                    }
+
                     DB::table('master_budget')
                         ->where('kode_budget', $item->kode_budget)
                         ->increment('terserap', $item->nominal);
@@ -362,11 +386,11 @@ class SppController extends Controller
 
                 // Audit log & history handled by SppObserver
 
-                NotificationService::sendToUser(
+                $this->notificationService->sendToUser(
                     $surat->id_maker,
                     NotificationService::TYPE_DISBURSED,
                     "Pencairan - {$surat->no_surat}",
-                    "SPP {$surat->no_surat} telah dicairkan sebesar Rp " . number_format($surat->total_nominal, 0, ',', '.'),
+                    "SPP {$surat->no_surat} telah dicairkan sebesar Rp ".number_format($surat->total_nominal, 0, ',', '.'),
                     'SPP',
                     $surat->no_surat
                 );
@@ -379,6 +403,7 @@ class SppController extends Controller
                 'trace' => $e->getTraceAsString(),
                 'no_surat' => $id ?? null,
             ]);
+
             return redirect()->back()->with('error', $e->getMessage() ?: 'Gagal mencairkan dana. Silakan coba kembali.');
         }
     }
@@ -395,7 +420,7 @@ class SppController extends Controller
         }
 
         $surat = DB::table('surat_permintaan')->where('no_surat', $no_surat)->first();
-        if (!$surat) {
+        if (! $surat) {
             return response()->json(['error' => 'Data tidak ditemukan'], 404);
         }
 
@@ -403,17 +428,10 @@ class SppController extends Controller
         $userArea = session('kode_area');
         $userProject = session('kode_project');
 
-        if (in_array($role, ['MAKER', 'AREA_MANAGER']) && $userArea !== $surat->kode_area) {
-            self::simpanLog('UNAUTHORIZED_API_ACCESS', "User mencoba akses detail SPP area lain: {$no_surat}");
-            return response()->json(['error' => 'Akses Ditolak'], 403);
-        }
+        if (! RoleHelper::canAccessSpp($role, $userArea, $userProject, $surat)) {
+            AuditLogService::log('UNAUTHORIZED_API_ACCESS', "User mencoba akses detail SPP {$no_surat}");
 
-        if (in_array($role, ['FINANCE_PROJECT', 'PROJECT_MANAGER', 'MANAGER_KEUANGAN'])) {
-            $hasProjectAccess = ($role === 'MANAGER_KEUANGAN' && $userProject === null) || ($userProject === $surat->kode_project);
-            if (!$hasProjectAccess) {
-                self::simpanLog('UNAUTHORIZED_API_ACCESS', "User mencoba akses detail SPP di luar project: {$no_surat}");
-                return response()->json(['error' => 'Akses Ditolak'], 403);
-            }
+            return response()->json(['error' => 'Akses Ditolak'], 403);
         }
 
         $items = DB::table('surat_permintaan_detail')
@@ -430,9 +448,11 @@ class SppController extends Controller
     // =========================================================================
     public function downloadFile($nama_file)
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             abort(401);
         }
+
+        $nama_file = basename($nama_file);
 
         $fileRecord = DB::table('surat_permintaan_files as f')
             ->join('surat_permintaan as s', 'f.no_surat', '=', 's.no_surat')
@@ -440,7 +460,7 @@ class SppController extends Controller
             ->select('s.kode_area', 's.kode_project', 's.no_surat')
             ->first();
 
-        if (!$fileRecord) {
+        if (! $fileRecord) {
             abort(404, 'Arsip tidak ditemukan.');
         }
 
@@ -448,24 +468,17 @@ class SppController extends Controller
         $userArea = session('kode_area');
         $userProject = session('kode_project');
 
-        $isStaffArea = in_array($role, ['MAKER', 'AREA_MANAGER'], true) && ($userArea === $fileRecord->kode_area);
-        $isProjectRole = false;
-        if (in_array($role, ['FINANCE_PROJECT', 'PROJECT_MANAGER', 'MANAGER_KEUANGAN'], true)) {
-            $isProjectRole = ($role === 'MANAGER_KEUANGAN' && $userProject === null) || ($userProject === $fileRecord->kode_project);
-        }
-        $isGlobalRole = in_array($role, ['ADMIN', 'KASIR_PUSAT', 'DIREKTUR'], true);
-
-        if (!$isStaffArea && !$isProjectRole && !$isGlobalRole) {
-            self::simpanLog('ILLEGAL_FILE_ACCESS', "Percobaan akses file tanpa izin: {$nama_file}");
+        if (! RoleHelper::canAccessSpp($role, $userArea, $userProject, $fileRecord)) {
+            AuditLogService::log('ILLEGAL_FILE_ACCESS', "Percobaan akses file tanpa izin: {$nama_file}");
             abort(403, 'Anda tidak memiliki hak akses atas dokumen ini.');
         }
 
-        $path = storage_path('app/private/lampiran_spp/' . $nama_file);
-        if (!file_exists($path)) {
+        $path = storage_path('app/private/lampiran_spp/' . basename($nama_file));
+        if (! file_exists($path)) {
             abort(404, 'Berkas arsip fisik tidak ditemukan di secure area storage server.');
         }
 
-        return response()->download($path);
+        return response()->download($path, basename($nama_file));
     }
 
     // =========================================================================
@@ -476,57 +489,21 @@ class SppController extends Controller
         $id = $request->query('no_surat');
         $surat = DB::table('surat_permintaan')->where('no_surat', $id)->first();
 
-        if (!$surat) {
+        if (! $surat) {
             return redirect()->back()->with('error', 'Data SPP tidak ditemukan!');
         }
 
         $role = session('role');
         $userArea = session('kode_area');
         $userProject = session('kode_project');
-        $isGlobalUser = in_array($role, ['ADMIN', 'KASIR_PUSAT', 'DIREKTUR'], true);
-        $isProjectRole = false;
-        if (in_array($role, ['FINANCE_PROJECT', 'PROJECT_MANAGER', 'MANAGER_KEUANGAN'], true)) {
-            $isProjectRole = ($role === 'MANAGER_KEUANGAN' && $userProject === null) || ($userProject === $surat->kode_project);
-        }
 
-        if (!$isGlobalUser && !$isProjectRole && ($userArea !== $surat->kode_area)) {
+        if (! RoleHelper::canAccessSpp($role, $userArea, $userProject, $surat)) {
             abort(403, 'AKSI ILEGAL: Anda dilarang mencetak dokumen dari unit area kerja lain!');
         }
 
-        self::simpanLog('CETAK_PDF_SECURE', "User mengunduh lembar arsip fisik PDF untuk SPP No {$surat->no_surat}", $surat);
+        AuditLogService::log('CETAK_PDF_SECURE', "User mengunduh lembar arsip fisik PDF untuk SPP No {$surat->no_surat}", $surat);
 
-        $getSignatures = function ($aksi, $no_surat) {
-            return DB::table('audit_trails as a')
-                ->join('users as u', DB::raw('a.username COLLATE utf8mb4_general_ci'), '=', DB::raw('u.username COLLATE utf8mb4_general_ci'))
-                ->where('a.aksi', $aksi)
-                ->where('a.deskripsi', 'like', "%{$no_surat}%")
-                ->select('u.nama_lengkap', 'u.signature_path', 'a.created_at')
-                ->orderBy('a.created_at', 'desc')
-                ->first();
-        };
-
-        $ttd = [
-            'maker' => $getSignatures('INSERT_SPP', $surat->no_surat),
-            'area_manager' => $getSignatures('APPROVE_AREA', $surat->no_surat),
-            'project_manager' => $getSignatures('APPROVE_PROJECT', $surat->no_surat),
-            'finance_manager' => $getSignatures('APPROVE_FINANCE', $surat->no_surat),
-            'cashier' => $getSignatures('DISBURSED_FINAL', $surat->no_surat),
-        ];
-
-        foreach ($ttd as $key => $person) {
-            if ($person && $person->signature_path) {
-                $path = storage_path('app/private/signatures/' . $person->signature_path);
-                if (file_exists($path)) {
-                    $type = pathinfo($path, PATHINFO_EXTENSION);
-                    $data = file_get_contents($path);
-                    $ttd[$key]->img_base64 = 'data:image/' . $type . ';base64,' . base64_encode($data);
-                } else {
-                    $ttd[$key]->img_base64 = null;
-                }
-            } else {
-                $ttd[$key] = null;
-            }
-        }
+        $ttd = $this->loadSignatures($surat->no_surat);
 
         $items = DB::table('surat_permintaan_detail')
             ->leftJoin('master_budget', 'surat_permintaan_detail.kode_budget', '=', 'master_budget.kode_budget')
@@ -535,7 +512,8 @@ class SppController extends Controller
             ->get();
 
         $pdf = Pdf::loadView('spp.cetak_pdf', compact('surat', 'items', 'ttd'))->setPaper('a4', 'portrait');
-        $namaFileDownload = 'SPP_' . str_replace('/', '-', $surat->no_surat) . '.pdf';
+        $namaFileDownload = 'SPP_'.str_replace('/', '-', $surat->no_surat).'.pdf';
+
         return $pdf->stream($namaFileDownload);
     }
 
@@ -547,21 +525,15 @@ class SppController extends Controller
         $id = $request->query('no_surat');
         $surat = DB::table('surat_permintaan')->where('no_surat', $id)->first();
 
-        if (!$surat) {
+        if (! $surat) {
             return redirect()->back()->with('error', 'Data SPP tidak ditemukan!');
         }
 
         $role = session('role');
         $userArea = session('kode_area');
         $userProject = session('kode_project');
-        $isGlobalUser = in_array($role, ['ADMIN', 'KASIR_PUSAT', 'DIREKTUR'], true);
-        $isProjectRole = false;
 
-        if (in_array($role, ['FINANCE_PROJECT', 'PROJECT_MANAGER', 'MANAGER_KEUANGAN'], true)) {
-            $isProjectRole = ($role === 'MANAGER_KEUANGAN' && $userProject === null) || ($userProject === $surat->kode_project);
-        }
-
-        if (!$isGlobalUser && !$isProjectRole && ($userArea !== $surat->kode_area)) {
+        if (! RoleHelper::canAccessSpp($role, $userArea, $userProject, $surat)) {
             abort(403, 'AKSI ILEGAL: Anda dilarang melihat preview dokumen dari unit area kerja lain!');
         }
 
@@ -579,5 +551,122 @@ class SppController extends Controller
 
         return view('spp.cetak_pdf', compact('surat', 'items', 'ttd'));
     }
-}
 
+    private function loadSignatures(string $noSurat): array
+    {
+        $surat = SuratPermintaan::where('no_surat', $noSurat)->first();
+        $history = DB::table('spp_history')
+            ->where('no_surat', $noSurat)
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        $signatures = [];
+
+        // 1. Collect all user IDs and usernames to batch query
+        $userIdPool = [];
+        $usernamePool = [];
+
+        if ($surat) {
+            $userIdPool[] = $surat->id_maker;
+        }
+
+        foreach ($history as $row) {
+            if ($row->aktor_username) {
+                $usernamePool[] = $row->aktor_username;
+            }
+        }
+
+        // 2. Batch load users (2 queries max instead of N)
+        $usersById = [];
+        $usersByUsername = [];
+
+        if (! empty($userIdPool)) {
+            $usersById = DB::table('users')
+                ->whereIn('id_user', array_unique($userIdPool))
+                ->get()
+                ->keyBy('id_user');
+        }
+
+        if (! empty($usernamePool)) {
+            $usersByUsername = DB::table('users')
+                ->whereIn('username', array_unique($usernamePool))
+                ->get()
+                ->keyBy('username');
+        }
+
+        // 3. Maker — from surat_permintaan.id_maker
+        if ($surat) {
+            $maker = $usersById[$surat->id_maker] ?? null;
+            if ($maker) {
+                $signatures[] = $this->buildSignature('Diajukan Oleh', 'Pemohon', $maker);
+            }
+        }
+
+        // 4. Approvers + Cashier — from spp_history
+        foreach ($history as $row) {
+            $label = null;
+            $detail = null;
+
+            if ($row->posisi_ke === 'FINISH') {
+                $label = 'Dijalankan Oleh';
+                $detail = 'Kasir Pusat';
+            } elseif ($row->posisi_dari && ! in_array($row->posisi_dari, ['REJECTED', 'MAKER'], true)) {
+                $label = 'Disetujui';
+                $detail = $this->getRoleSignatureLabel($row->posisi_dari);
+            }
+
+            if ($label && $detail) {
+                $user = $usersByUsername[$row->aktor_username] ?? null;
+                $signatures[] = $this->buildSignature($label, $detail, $user);
+            }
+        }
+
+        // 3. Load signature images
+        foreach ($signatures as &$sig) {
+            $sig['img_base64'] = null;
+            if (! empty($sig['signature_path'])) {
+                $path = storage_path('app/private/signatures/'.$sig['signature_path']);
+                if (file_exists($path)) {
+                    $type = pathinfo($path, PATHINFO_EXTENSION);
+                    $data = file_get_contents($path);
+                    $sig['img_base64'] = 'data:image/'.$type.';base64,'.base64_encode($data);
+                }
+            }
+        }
+
+        return $signatures;
+    }
+
+    private function buildSignature(string $label, string $detail, ?object $user): array
+    {
+        return [
+            'label' => $label,
+            'role_detail' => $detail,
+            'nama_lengkap' => $user ? ($user->nama_lengkap ?? $user->name ?? $user->nama ?? '-') : '-',
+            'signature_path' => $user ? ($user->signature_path ?? null) : null,
+            'img_base64' => null,
+        ];
+    }
+
+    private function getRoleSignatureLabel(?string $role): ?string
+    {
+        $labels = [
+            'AREA_MANAGER' => 'Area Manager',
+            'FINANCE_PROJECT' => 'Finance Project',
+            'PROJECT_MANAGER' => 'Project Manager',
+            'MANAGER_KEUANGAN' => 'Koordinator Keuangan',
+            'MANAGER_PKP' => 'Manager PKP',
+            'DIREKTUR' => 'Direktur',
+            'KASIR_PUSAT' => 'Kasir Pusat',
+            'KOORDINATOR_KEUANGAN' => 'Koordinator',
+            'KOORDINATOR_PK' => 'Koordinator',
+            'KOORDINATOR_TC' => 'Koordinator',
+            'KOORDINATOR_DIKLAT' => 'Koordinator',
+            'KOORDINATOR_KLINIK' => 'Koordinator',
+            'KOORDINATOR_BATRA' => 'Koordinator',
+            'KOORDINATOR_BIDANG' => 'Koordinator',
+        ];
+
+        return $labels[$role] ?? null;
+    }
+}

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Area;
+use App\Models\Project;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -23,21 +24,21 @@ class UserAccessController extends Controller
     {
         $user = User::findOrFail($id);
         $aksesRaw = $user->akses()->orderBy('id_access', 'asc')->get();
-        
+
         $grouped = [];
         foreach ($aksesRaw as $a) {
-            $key = $a->role . '|' . $a->kode_area . '|' . $a->jabatan;
-            if (!isset($grouped[$key])) {
+            $key = $a->role.'|'.$a->kode_area.'|'.$a->jabatan;
+            if (! isset($grouped[$key])) {
                 $grouped[$key] = (object) [
                     'role' => $a->role,
                     'kode_area' => $a->kode_area,
                     'jabatan' => $a->jabatan,
                     'kode_project_list' => [],
                     'has_all' => false,
-                    'has_null' => false
+                    'has_null' => false,
                 ];
             }
-            
+
             if ($a->kode_project === 'all') {
                 $grouped[$key]->has_all = true;
             } elseif ($a->kode_project === null || $a->kode_project === '') {
@@ -52,22 +53,22 @@ class UserAccessController extends Controller
             $kode_project = null;
             if ($g->has_all) {
                 $kode_project = 'all';
-            } elseif (!empty($g->kode_project_list)) {
+            } elseif (! empty($g->kode_project_list)) {
                 $kode_project = implode(',', $g->kode_project_list);
             } elseif ($g->has_null) {
                 $kode_project = null;
             }
-            
+
             $akses->push((object) [
                 'role' => $g->role,
                 'kode_area' => $g->kode_area,
                 'jabatan' => $g->jabatan,
-                'kode_project' => $kode_project
+                'kode_project' => $kode_project,
             ]);
         }
 
         $areas = Area::all();
-        $projects = \App\Models\Project::all();
+        $projects = Project::all();
 
         return view('admin.user.access_edit', compact('user', 'akses', 'areas', 'projects'));
     }
@@ -104,7 +105,7 @@ class UserAccessController extends Controller
             // Validasi row yang diisi
             if ($role === '') {
                 $errors["akses.$i.role"] = 'Role wajib dipilih.';
-            } elseif (!in_array($role, self::VALID_ROLES, true)) {
+            } elseif (! in_array($role, self::VALID_ROLES, true)) {
                 $errors["akses.$i.role"] = 'Role tidak valid.';
             }
 
@@ -127,7 +128,7 @@ class UserAccessController extends Controller
                 $row['kode_area'] = 'PUSAT';
             }
 
-            if (!in_array($role, $projectScopedRoles, true) && ($kodeProject === '' || $kodeProject === 'all')) {
+            if (! in_array($role, $projectScopedRoles, true) && ($kodeProject === '' || $kodeProject === 'all')) {
                 $row['kode_project'] = null;
             }
 
@@ -138,7 +139,7 @@ class UserAccessController extends Controller
             $validRows[] = $row;
         }
 
-        if (!empty($errors)) {
+        if (! empty($errors)) {
             return redirect()->back()->withErrors($errors)->withInput();
         }
 

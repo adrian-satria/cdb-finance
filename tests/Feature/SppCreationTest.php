@@ -2,10 +2,11 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
+use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
 
 class SppCreationTest extends TestCase
 {
@@ -36,7 +37,7 @@ class SppCreationTest extends TestCase
             'kode_area' => 'pusat',
         ]);
         session(['role' => 'MAKER', 'kode_area' => 'pusat']);
-        $this->actingAs(\App\Models\User::find($userId));
+        $this->actingAs(User::find($userId));
     }
 
     private function seedProject(): void
