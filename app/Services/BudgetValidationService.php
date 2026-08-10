@@ -132,12 +132,20 @@ class BudgetValidationService
                 ->get()
                 ->keyBy('kode_budget');
 
+            $adminFeeApplied = false;
+
             foreach ($items as $item) {
                 $budget = $budgets->get($item['kode_budget']);
                 if (!$budget) continue;
 
                 $nominal = (string) ($item['nominal'] ?? $item['jumlah'] ?? '0');
-                $total = bcadd($nominal, $biayaAdmin, 2);
+                $total = $nominal;
+
+                if (!$adminFeeApplied && bccomp($biayaAdmin, '0', 2) === 1) {
+                    $total = bcadd($nominal, $biayaAdmin, 2);
+                    $adminFeeApplied = true;
+                }
+
                 DB::table('budget_area')
                     ->where('id', $budget->id)
                     ->update([
