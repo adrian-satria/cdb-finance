@@ -125,6 +125,9 @@ class SppController extends Controller
 
                 DB::table('surat_permintaan_detail')->insert($detailRecords);
 
+                // 5b. Reserve budget to prevent double-booking of pending SPP
+                $this->budgetService->reserveBudget($request->items, $kodeArea, $request->kode_project);
+
                 // 6. Handle File Uploads
                 if ($request->hasFile('file_lampiran')) {
                     $this->fileService->uploadSppAttachments(
@@ -352,6 +355,11 @@ class SppController extends Controller
                         "SPP {$id} ditolak oleh {$currentRole}. Alasan: ".($request->alasan ?? '-'),
                         'SPP', $id
                     );
+
+                    $rejectedItems = DB::table('surat_permintaan_detail')
+                        ->where('no_surat', $surat->no_surat)
+                        ->get(['kode_budget', 'nominal']);
+                    $this->budgetService->releaseReservation($rejectedItems->toArray(), $surat->kode_area, $surat->kode_project);
                 }
 
                 $feedbackSuccess = ($request->aksi == 'approve')

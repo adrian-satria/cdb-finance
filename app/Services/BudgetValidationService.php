@@ -57,7 +57,11 @@ class BudgetValidationService
                     );
                 }
 
-                $sisaSaldo = bcsub((string) $budget->alokasi_dana, (string) $budget->terserap, 2);
+                $sisaSaldo = bcsub(
+                    bcsub((string) $budget->alokasi_dana, (string) $budget->terserap, 2),
+                    (string) ($budget->terserap_sementara ?? 0),
+                    2
+                );
 
                 if (bccomp($jumlah, $sisaSaldo, 2) === 1) {
                     $isOverBudget = true;
@@ -132,10 +136,14 @@ class BudgetValidationService
                 $budget = $budgets->get($item['kode_budget']);
                 if (!$budget) continue;
 
-                $total = bcadd((string) $item['nominal'], $biayaAdmin, 2);
+                $nominal = (string) ($item['nominal'] ?? $item['jumlah'] ?? '0');
+                $total = bcadd($nominal, $biayaAdmin, 2);
                 DB::table('budget_area')
                     ->where('id', $budget->id)
-                    ->increment('terserap', $total);
+                    ->update([
+                        'terserap' => DB::raw("terserap + {$total}"),
+                        'terserap_sementara' => DB::raw("GREATEST(0, terserap_sementara - {$nominal})"),
+                    ]);
             }
 
             // Sync master_budget.terserap = SUM(budget_area.terserap)
@@ -150,6 +158,41 @@ class BudgetValidationService
         });
     }
 
+    /**
+     * Reserve budget for a new SPP (terserap_sementara) to prevent double-booking.
+     * Called inside the store transaction after SPP record is created.
+     */
+    public function reserveBudget(array $items, string $kodeArea, string $kodeProject): void
+    {
+        if (in_array($kodeProject, config('spp_workflow.no_budget_projects', []), true)) {
+            return;
+        }
+
+        foreach ($items as $item) {
+            DB::table('budget_area')
+                ->where('kode_budget', $item['kode_budget'])
+                ->where('kode_area', $kodeArea)
+                ->increment('terserap_sementara', (string) ($item['jumlah'] ?? $item['nominal'] ?? '0'));
+        }
+    }
+
+    /**
+     * Release budget reservation for a rejected SPP.
+     */
+    public function releaseReservation(array $items, string $kodeArea, string $kodeProject): void
+    {
+        if (in_array($kodeProject, config('spp_workflow.no_budget_projects', []), true)) {
+            return;
+        }
+
+        foreach ($items as $item) {
+            DB::table('budget_area')
+                ->where('kode_budget', $item['kode_budget'])
+                ->where('kode_area', $kodeArea)
+                ->decrement('terserap_sementara', (string) ($item['nominal'] ?? $item['jumlah'] ?? '0'));
+        }
+    }
+
     public function calculateRemainingBudget(string $kodeBudget, ?string $kodeArea = null): string
     {
         $q = DB::table('budget_area')->where('kode_budget', $kodeBudget);
@@ -157,7 +200,11 @@ class BudgetValidationService
         $budget = $q->first();
 
         if (!$budget) return '0';
-        return bcsub((string) $budget->alokasi_dana, (string) $budget->terserap, 2);
+        return bcsub(
+            bcsub((string) $budget->alokasi_dana, (string) $budget->terserap, 2),
+            (string) ($budget->terserap_sementara ?? 0),
+            2
+        );
     }
 
     public function budgetExists(string $kodeBudget, ?string $kodeArea = null): bool
