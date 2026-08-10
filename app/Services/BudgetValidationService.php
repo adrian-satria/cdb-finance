@@ -122,6 +122,7 @@ class BudgetValidationService
         }
 
         DB::transaction(function () use ($items, $kodeArea, $biayaAdmin) {
+            $items = array_map(fn($i) => (array) $i, $items);
             $budgetCodes = array_map(fn($i) => $i['kode_budget'], $items);
             sort($budgetCodes, SORT_STRING);
 
@@ -135,6 +136,7 @@ class BudgetValidationService
             $adminFeeApplied = false;
 
             foreach ($items as $item) {
+                $item = (array) $item;
                 $budget = $budgets->get($item['kode_budget']);
                 if (!$budget) continue;
 
@@ -177,6 +179,7 @@ class BudgetValidationService
         }
 
         foreach ($items as $item) {
+            $item = (array) $item;
             DB::table('budget_area')
                 ->where('kode_budget', $item['kode_budget'])
                 ->where('kode_area', $kodeArea)
@@ -194,6 +197,7 @@ class BudgetValidationService
         }
 
         foreach ($items as $item) {
+            $item = (array) $item;
             DB::table('budget_area')
                 ->where('kode_budget', $item['kode_budget'])
                 ->where('kode_area', $kodeArea)
