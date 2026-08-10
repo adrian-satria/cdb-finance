@@ -26,6 +26,8 @@ class AuthController extends Controller
             $user = Auth::user();
             $akses = $user->akses;
 
+            AuditLogService::logLogin($credentials['username'], true);
+
             if ($akses->isEmpty()) {
                 return back()->with('error', 'Akun Anda tidak memiliki akses peran. Hubungi administrator.');
             }
@@ -44,6 +46,8 @@ class AuthController extends Controller
 
             return redirect()->intended('/spp/tambah');
         }
+
+        AuditLogService::logLogin($credentials['username'], false);
 
         return back()->with('error', 'Username atau Password salah!');
     }
@@ -144,6 +148,7 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
+        AuditLogService::logLogout();
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

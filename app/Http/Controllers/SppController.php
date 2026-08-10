@@ -425,6 +425,11 @@ class SppController extends Controller
                     throw new \Exception('Data pengajuan SPP tidak ditemukan!');
                 }
 
+                if (! RoleHelper::canAccessSpp($currentRole, session('kode_area'), session('kode_project'), $surat)) {
+                    AuditLogService::log('UNAUTHORIZED_VALIDASI', "User coba validasi SPP {$id} di luar area/project scope");
+                    throw new \Exception('AKSES DITOLAK: SPP ini berada di luar area/project kewenangan Anda.');
+                }
+
                 if (! $this->workflowService->validateWorkflowTransition($surat, $currentRole)) {
                     throw new \Exception("WORKFLOW VIOLATION: Berkas ini sedang berada dalam otoritas [{$surat->posisi_saat_ini}], bukan di meja kerja Anda!");
                 }

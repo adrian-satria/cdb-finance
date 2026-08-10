@@ -160,9 +160,9 @@ Settings (session_timeout, max_file_size, maintenance_mode, dll.) bisa di-edit a
 | P0 | B3 budget double-booking | reservation / hitung pending | ✅ FIXED (`terserap_sementara`) |
 | P0 | B5 nomor SPP collision | sequence table + unique index | ✅ FIXED (`spp_sequences` atomic) |
 | P1 | B4 overspend blocking | kebijakan approval khusus | ⏳ belum |
-| P1 | B6 scoping di validasi/cairkan | tambah canAccessSpp | ⏳ belum |
+| P1 | B6 scoping di validasi/cairkan | tambah canAccessSpp | ✅ FIXED (canAccessSpp di validasi) |
 | P1 | B7 biaya_admin 5x | alokasikan sekali | ✅ FIXED (applied once on first item) |
-| P1 | S1 login tidak di-log | panggil logLogin | ⏳ belum |
+| P1 | S1 login tidak di-log | panggil logLogin | ✅ FIXED (logLogin sukses/gagal + logLogout) |
 | P1 | F3 SPP revisi stuck | endpoint edit/resubmit | ✅ FIXED (edit.blade.php + update flow) |
 | P2 | B8, F1, F2, F4, S3, I1–I8 | perbaikan bertahap | ⏳ belum |
 
