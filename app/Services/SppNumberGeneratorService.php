@@ -2,20 +2,18 @@
 
 namespace App\Services;
 
-use Exception;
 use Illuminate\Support\Facades\DB;
 
 class SppNumberGeneratorService
 {
     /**
-     * Generate the next SPP number (global sequence across all projects).
+     * Generate the next SPP number (per-project monthly sequence).
      * Format: YYYY/RomanMonth/SPP/KodeProject/NNN
+     * Atomic increment via spp_sequences table to prevent collision.
      *
      * @param  string  $tanggal  Date in Y-m-d format
-     * @param  string  $kodeProject  Project code (shown in number, sequence is global)
+     * @param  string  $kodeProject  Project code (shown in number, sequence per project/month)
      * @return string Generated SPP number
-     *
-     * @throws Exception if collision detected
      */
     public function generateNextNumber(string $tanggal, string $kodeProject = 'XX'): string
     {
@@ -23,37 +21,35 @@ class SppNumberGeneratorService
         $bulanIndex = (int) date('n', strtotime($tanggal));
         $bulanRomawi = $this->getRomanMonth($bulanIndex);
 
-        $terakhir = DB::table('surat_permintaan')
-            ->whereYear('created_at', $tahun)
-            ->orderBy('created_at', 'desc')
-            ->lockForUpdate()
-            ->first();
+        $noUrut = DB::transaction(function () use ($tahun, $bulanIndex, $kodeProject) {
+            $seq = DB::table('spp_sequences')
+                ->where('tahun', $tahun)
+                ->where('bulan', $bulanIndex)
+                ->where('kode_project', $kodeProject)
+                ->lockForUpdate()
+                ->first();
 
-        if ($terakhir && ! empty($terakhir->no_surat)) {
-            $noUrut = (int) substr($terakhir->no_surat, -3) + 1;
-        } else {
-            $noUrut = 1;
-        }
+            if ($seq) {
+                $nextNum = $seq->last_number + 1;
+                DB::table('spp_sequences')
+                    ->where('id', $seq->id)
+                    ->update(['last_number' => $nextNum]);
+            } else {
+                DB::table('spp_sequences')->insert([
+                    'tahun' => $tahun,
+                    'bulan' => $bulanIndex,
+                    'kode_project' => $kodeProject,
+                    'last_number' => 1,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+                $nextNum = 1;
+            }
 
-        $nomorBaru = $tahun.'/'.$bulanRomawi."/SPP/{$kodeProject}/".str_pad($noUrut, 3, '0', STR_PAD_LEFT);
+            return $nextNum;
+        });
 
-        if ($this->checkCollision($nomorBaru)) {
-            throw new Exception("Collision detected for SPP number: {$nomorBaru}");
-        }
-
-        return $nomorBaru;
-    }
-
-    /**
-     * Check if SPP number already exists.
-     *
-     * @return bool True if exists, false otherwise
-     */
-    public function checkCollision(string $noSurat): bool
-    {
-        return DB::table('surat_permintaan')
-            ->where('no_surat', $noSurat)
-            ->exists();
+        return $tahun.'/'.$bulanRomawi."/SPP/{$kodeProject}/".str_pad($noUrut, 3, '0', STR_PAD_LEFT);
     }
 
     /**
@@ -98,16 +94,13 @@ class SppNumberGeneratorService
      */
     public function getNextSequence(int $tahun, int $bulan, string $kodeProject = 'XX'): int
     {
-        $terakhir = DB::table('surat_permintaan')
-            ->whereYear('created_at', $tahun)
-            ->orderBy('created_at', 'desc')
+        $seq = DB::table('spp_sequences')
+            ->where('tahun', $tahun)
+            ->where('bulan', $bulan)
+            ->where('kode_project', $kodeProject)
             ->first();
 
-        if ($terakhir && ! empty($terakhir->no_surat)) {
-            return (int) substr($terakhir->no_surat, -3) + 1;
-        }
-
-        return 1;
+        return ($seq ? $seq->last_number : 0) + 1;
     }
 
     /**
