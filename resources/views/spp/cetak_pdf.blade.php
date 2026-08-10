@@ -209,7 +209,7 @@
                     <tr>
                         <td>Bank / No. Rekening</td>
                         <td>:</td>
-                        <td>{{ $surat->bank_tujuan ?? '-' }} / {{ ($surat->no_rekening_tujuan ?? null) ? '****' . substr($surat->no_rekening_tujuan, -4) : '-' }}</td>
+                        <td>{{ $surat->bank_tujuan ?? '-' }} / {{ $surat->no_rekening_tujuan ?? '-' }}</td>
                     </tr>
                 </table>
             </td>

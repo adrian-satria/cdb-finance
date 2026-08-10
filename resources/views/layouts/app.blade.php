@@ -81,6 +81,12 @@
             </a>
 
             <div class="collapse sidebar-child-menu {{ request()->is('admin*') ? 'show' : '' }}" id="adminSubMenu">
+                <a href="/admin/project" class="{{ request()->is('admin/project*') ? 'active' : '' }}">
+                    <i class="fa-solid fa-diagram-project me-2"></i>Master Project
+                </a>
+                <a href="/admin/area" class="{{ request()->is('admin/area*') ? 'active' : '' }}">
+                    <i class="fa-solid fa-location-dot me-2"></i>Master Area
+                </a>
                 <a href="/admin/budget" class="{{ request()->is('admin/budget*') ? 'active' : '' }}">
                     <i class="fa-solid fa-folder-tree me-2"></i>Master Budget
                 </a>

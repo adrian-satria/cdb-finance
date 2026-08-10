@@ -57,7 +57,7 @@ class RoleHelper
             return true;
         }
 
-        if (self::isProjectFinance($role) && $userProject === $surat->kode_project) {
+        if (self::isProjectScoped($role) && $userProject === $surat->kode_project) {
             return true;
         }
 

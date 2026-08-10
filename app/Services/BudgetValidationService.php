@@ -9,52 +9,90 @@ use Illuminate\Support\Facades\DB;
 class BudgetValidationService
 {
     /**
-     * Validate if budget ceiling can accommodate the requested amount.
+     * Validate multiple budget items against budget_area (batched).
+     * For no_budget_projects, skip validation entirely.
+     * Allows overspend: returns isValid=true with isOverBudget flag.
      *
-     * @param  string  $kodeBudget  Budget code to validate
-     * @param  string  $jumlah  Amount requested (string for bcmath precision)
-     * @return ValidationResult Validation result
+     * @param  array  $items  Array of items with 'kode_budget' and 'jumlah'
+     * @param  string|null  $kodeArea  Area code for per-area budget check
+     * @param  string|null  $kodeProject  Project code (for no-budget exclusion)
+     * @return ValidationResult
      */
-    public function validateBudgetCeiling(string $kodeBudget, string $jumlah): ValidationResult
+    public function lockAndValidateMultiple(array $items, ?string $kodeArea = null, ?string $kodeProject = null): ValidationResult
     {
         try {
-            $budget = DB::table('master_budget')
-                ->where('kode_budget', $kodeBudget)
-                ->lockForUpdate()
-                ->first();
-
-            if (! $budget) {
-                return $this->failure(
-                    "Kode Budget [{$kodeBudget}] tidak ditemukan di sistem master!",
-                    ['kode_budget' => $kodeBudget]
-                );
+            if ($kodeProject && in_array($kodeProject, config('spp_workflow.no_budget_projects', []), true)) {
+                $nominal = array_reduce($items, fn($c, $i) => bcadd($c, (string) ($i['jumlah'] ?? '0'), 2), '0');
+                return $this->success([
+                    'total_nominal' => $nominal,
+                    'no_budget' => true,
+                ]);
             }
 
-            $sisaSaldo = bcsub((string) $budget->alokasi_dana, (string) $budget->terserap, 2);
+            $kodeArea = $kodeArea ?? 'PUSAT';
+            $kodeBudgets = array_map(fn($i) => $i['kode_budget'], $items);
+            sort($kodeBudgets, SORT_STRING);
 
-            if (bccomp($jumlah, $sisaSaldo, 2) === 1) {
-                $namaBudget = $budget->nama_budget ?? $kodeBudget;
-                $sisaSaldoFormat = number_format($sisaSaldo, 0, ',', '.');
-                $dimintaFormat = number_format($jumlah, 0, ',', '.');
+            $budgets = DB::table('budget_area')
+                ->whereIn('kode_budget', $kodeBudgets)
+                ->where('kode_area', $kodeArea)
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('kode_budget');
 
-                return $this->failure(
-                    "⚠️ PENGAKSESAN DANA DITOLAK! Saldo untuk akun [{$namaBudget}] tidak mencukupi. Sisa saldo saat ini: Rp {$sisaSaldoFormat}, namun Anda mencoba mengajukan: Rp {$dimintaFormat}.",
-                    [
+            $totalNominal = '0';
+            $isOverBudget = false;
+            $overbudgetItems = [];
+            $totalDefisit = '0';
+
+            foreach ($items as $item) {
+                $kodeBudget = $item['kode_budget'];
+                $jumlah = (string) $item['jumlah'];
+                $budget = $budgets->get($kodeBudget);
+
+                if (! $budget) {
+                    return $this->failure(
+                        "Kode Budget [{$kodeBudget}] tidak ditemukan di area {$kodeArea}!",
+                        ['kode_budget' => $kodeBudget, 'kode_area' => $kodeArea]
+                    );
+                }
+
+                $sisaSaldo = bcsub((string) $budget->alokasi_dana, (string) $budget->terserap, 2);
+
+                if (bccomp($jumlah, $sisaSaldo, 2) === 1) {
+                    $isOverBudget = true;
+                    $defisit = bcsub($sisaSaldo, $jumlah, 2);
+                    $totalDefisit = bcadd($totalDefisit, $defisit, 2);
+                    $overbudgetItems[] = [
                         'kode_budget' => $kodeBudget,
-                        'nama_budget' => $namaBudget,
+                        'nama_budget' => $budget->nama_budget ?? $kodeBudget,
                         'alokasi' => $budget->alokasi_dana,
                         'terserap' => $budget->terserap,
                         'sisa_saldo' => $sisaSaldo,
                         'diminta' => $jumlah,
-                    ]
-                );
+                        'defisit' => $defisit,
+                    ];
+                }
+
+                $totalNominal = bcadd($totalNominal, $jumlah, 2);
             }
 
-            return $this->success([
-                'kode_budget' => $kodeBudget,
-                'sisa_saldo' => $sisaSaldo,
-                'diminta' => $jumlah,
+            $result = $this->success([
+                'total_items' => count($items),
+                'total_nominal' => $totalNominal,
+                'is_overbudget' => $isOverBudget,
+                'overbudget_items' => $overbudgetItems,
+                'total_defisit' => $totalDefisit,
+                'kode_area' => $kodeArea,
             ]);
+
+            if ($isOverBudget) {
+                $result->isOverBudget = true;
+                $result->defisit = $totalDefisit;
+                $result->overbudgetItems = $overbudgetItems;
+            }
+
+            return $result;
 
         } catch (Exception $e) {
             return $this->failure(
@@ -65,73 +103,80 @@ class BudgetValidationService
     }
 
     /**
-     * Validate multiple budget items at once.
+     * Update budget_area.terserap and sync master_budget.terserap.
+     * For no_budget_projects, skip entirely.
      *
-     * @param  array  $items  Array of items with 'kode_budget' and 'jumlah'
-     * @return ValidationResult Validation result
+     * @param  array  $items  Items with 'kode_budget' and 'nominal'
+     * @param  string  $kodeArea  Area code
+     * @param  string  $kodeProject  Project code
+     * @param  string  $biayaAdmin  Additional admin fee
      */
-    public function lockAndValidateMultiple(array $items): ValidationResult
+    public function updateTerserap(array $items, string $kodeArea, string $kodeProject, string $biayaAdmin = '0'): void
     {
-        try {
-            $totalNominal = '0';
+        if (in_array($kodeProject, config('spp_workflow.no_budget_projects', []), true)) {
+            return;
+        }
+
+        DB::transaction(function () use ($items, $kodeArea, $biayaAdmin) {
+            $budgetCodes = array_map(fn($i) => $i['kode_budget'], $items);
+            sort($budgetCodes, SORT_STRING);
+
+            $budgets = DB::table('budget_area')
+                ->whereIn('kode_budget', $budgetCodes)
+                ->where('kode_area', $kodeArea)
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('kode_budget');
 
             foreach ($items as $item) {
-                $kodeBudget = $item['kode_budget'];
-                $jumlah = (string) $item['jumlah'];
+                $budget = $budgets->get($item['kode_budget']);
+                if (!$budget) continue;
 
-                $validation = $this->validateBudgetCeiling($kodeBudget, $jumlah);
-
-                if (! $validation->isValid) {
-                    return $validation;
-                }
-
-                $totalNominal = bcadd($totalNominal, $jumlah, 2);
+                $total = bcadd((string) $item['nominal'], $biayaAdmin, 2);
+                DB::table('budget_area')
+                    ->where('id', $budget->id)
+                    ->increment('terserap', $total);
             }
 
-            return $this->success([
-                'total_items' => count($items),
-                'total_nominal' => $totalNominal,
-            ]);
-
-        } catch (Exception $e) {
-            return $this->failure(
-                'Error validating multiple items: '.$e->getMessage(),
-                ['exception' => $e->getMessage()]
-            );
-        }
+            // Sync master_budget.terserap = SUM(budget_area.terserap)
+            foreach ($budgetCodes as $code) {
+                $sum = DB::table('budget_area')
+                    ->where('kode_budget', $code)
+                    ->sum('terserap');
+                DB::table('master_budget')
+                    ->where('kode_budget', $code)
+                    ->update(['terserap' => $sum]);
+            }
+        });
     }
 
-    public function calculateRemainingBudget(string $kodeBudget): string
+    public function calculateRemainingBudget(string $kodeBudget, ?string $kodeArea = null): string
     {
-        $budget = DB::table('master_budget')
-            ->where('kode_budget', $kodeBudget)
-            ->first();
+        $q = DB::table('budget_area')->where('kode_budget', $kodeBudget);
+        if ($kodeArea) $q->where('kode_area', $kodeArea);
+        $budget = $q->first();
 
-        if (! $budget) {
-            return '0';
-        }
-
+        if (!$budget) return '0';
         return bcsub((string) $budget->alokasi_dana, (string) $budget->terserap, 2);
     }
 
-    public function budgetExists(string $kodeBudget): bool
+    public function budgetExists(string $kodeBudget, ?string $kodeArea = null): bool
     {
-        return DB::table('master_budget')
-            ->where('kode_budget', $kodeBudget)
-            ->exists();
+        $q = DB::table('budget_area')->where('kode_budget', $kodeBudget);
+        if ($kodeArea) $q->where('kode_area', $kodeArea);
+        return $q->exists();
     }
 
-    public function getBudgetDetails(string $kodeBudget): ?object
+    public function getBudgetDetails(string $kodeBudget, ?string $kodeArea = null): ?object
     {
-        return DB::table('master_budget')
-            ->where('kode_budget', $kodeBudget)
-            ->first();
+        $q = DB::table('budget_area')->where('kode_budget', $kodeBudget);
+        if ($kodeArea) $q->where('kode_area', $kodeArea);
+        return $q->first();
     }
 
-    public function isWithinBudget(string $kodeBudget, string $jumlah): bool
+    public function isWithinBudget(string $kodeBudget, string $jumlah, ?string $kodeArea = null): bool
     {
-        $remaining = $this->calculateRemainingBudget($kodeBudget);
-
+        $remaining = $this->calculateRemainingBudget($kodeBudget, $kodeArea);
         return bccomp($jumlah, $remaining, 2) !== 1;
     }
 

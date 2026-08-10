@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Project;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class ReportController extends Controller
@@ -69,7 +71,7 @@ class ReportController extends Controller
         }
 
         $budgets = $query->orderBy('master_budget.kode_project')->paginate(50);
-        $projects = DB::table('project')->orderBy('kode_project')->get();
+        $projects = Cache::remember('ref_projects', 3600, fn() => Project::orderBy('kode_project')->get());
         $summary = DB::table('master_budget')
             ->select(
                 DB::raw('SUM(alokasi_dana) as total_alokasi'),
@@ -137,7 +139,7 @@ class ReportController extends Controller
             return $this->csvResponse('ringkasan_keuangan_' . date('Ymd'), [], $rows->toArray());
         }
 
-        $projects = DB::table('project')->orderBy('kode_project')->get();
+        $projects = Cache::remember('ref_projects', 3600, fn() => Project::orderBy('kode_project')->get());
         return view('admin.reports.financial_summary', compact('monthlyData', 'projectSummary', 'tahun', 'kodeProject', 'projects'));
     }
 
@@ -178,7 +180,7 @@ class ReportController extends Controller
             ], $rows);
         }
 
-        $projects = DB::table('project')->orderBy('kode_project')->get();
+        $projects = Cache::remember('ref_projects', 3600, fn() => Project::orderBy('kode_project')->get());
         return view('admin.reports.area_performance', compact('areaData', 'tahun', 'kodeProject', 'projects'));
     }
 }

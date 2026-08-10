@@ -105,33 +105,36 @@ class SppNumberGeneratorServiceTest extends TestCase
     /** @test */
     public function it_parses_spp_number_correctly()
     {
-        $noSurat = '2026/VII/SPP/PROJECT-X/015';
+        $noSurat = '2026/VII/SPP/40/015';
         $result = $this->service->parseNumber($noSurat);
 
         $this->assertEquals('2026', $result['tahun']);
         $this->assertEquals('VII', $result['bulan']);
+        $this->assertEquals('40', $result['kode_project']);
         $this->assertEquals(15, $result['no_urut']);
     }
 
     /** @test */
     public function it_parses_spp_number_with_leading_zeros()
     {
-        $noSurat = '2026/I/SPP/PROJECT-X/001';
+        $noSurat = '2026/I/SPP/40/001';
         $result = $this->service->parseNumber($noSurat);
 
         $this->assertEquals('2026', $result['tahun']);
         $this->assertEquals('I', $result['bulan']);
+        $this->assertEquals('40', $result['kode_project']);
         $this->assertEquals(1, $result['no_urut']);
     }
 
     /** @test */
     public function it_parses_spp_number_with_high_sequence()
     {
-        $noSurat = '2026/XII/SPP/PROJECT-X/999';
+        $noSurat = '2026/XII/SPP/40/999';
         $result = $this->service->parseNumber($noSurat);
 
         $this->assertEquals('2026', $result['tahun']);
         $this->assertEquals('XII', $result['bulan']);
+        $this->assertEquals('40', $result['kode_project']);
         $this->assertEquals(999, $result['no_urut']);
     }
 
@@ -154,46 +157,46 @@ class SppNumberGeneratorServiceTest extends TestCase
     /** @test */
     public function it_validates_correct_spp_format()
     {
-        $this->assertTrue($this->service->isValidFormat('2026/VII/SPP/PROJECT-X/015'));
-        $this->assertTrue($this->service->isValidFormat('2026/I/SPP/PROJECT-X/001'));
-        $this->assertTrue($this->service->isValidFormat('2026/XII/SPP/PROJECT-X/999'));
+        $this->assertTrue($this->service->isValidFormat('2026/VII/SPP/40/015'));
+        $this->assertTrue($this->service->isValidFormat('2026/I/SPP/40/001'));
+        $this->assertTrue($this->service->isValidFormat('2026/XII/SPP/40/999'));
     }
 
     /** @test */
     public function it_rejects_invalid_year_format()
     {
-        $this->assertFalse($this->service->isValidFormat('26/VII/SPP/PROJECT-X/015'));
-        $this->assertFalse($this->service->isValidFormat('20266/VII/SPP/PROJECT-X/015'));
+        $this->assertFalse($this->service->isValidFormat('26/VII/SPP/40/015'));
+        $this->assertFalse($this->service->isValidFormat('20266/VII/SPP/40/015'));
     }
 
     /** @test */
     public function it_rejects_invalid_month_format()
     {
-        $this->assertFalse($this->service->isValidFormat('2026/13/SPP/PROJECT-X/015'));
-        $this->assertFalse($this->service->isValidFormat('2026/JAN/SPP/PROJECT-X/015'));
-        $this->assertFalse($this->service->isValidFormat('2026/XIII/SPP/PROJECT-X/015'));
+        $this->assertFalse($this->service->isValidFormat('2026/13/SPP/40/015'));
+        $this->assertFalse($this->service->isValidFormat('2026/JAN/SPP/40/015'));
+        $this->assertFalse($this->service->isValidFormat('2026/XIII/SPP/40/015'));
     }
 
     /** @test */
     public function it_rejects_wrong_separator()
     {
-        $this->assertFalse($this->service->isValidFormat('2026-VII-SPP-PROJECT-X-015'));
-        $this->assertFalse($this->service->isValidFormat('2026.VII.SPP.PROJECT-X.015'));
+        $this->assertFalse($this->service->isValidFormat('2026-VII-SPP-40-015'));
+        $this->assertFalse($this->service->isValidFormat('2026.VII.SPP.40.015'));
     }
 
     /** @test */
     public function it_rejects_missing_components()
     {
         $this->assertFalse($this->service->isValidFormat('2026/VII/SPP/015'));
-        $this->assertFalse($this->service->isValidFormat('2026/VII/PROJECT-X/015'));
+        $this->assertFalse($this->service->isValidFormat('2026/VII/40/015'));
     }
 
     /** @test */
     public function it_rejects_invalid_sequence_format()
     {
-        $this->assertFalse($this->service->isValidFormat('2026/VII/SPP/PROJECT-X/15')); // Only 2 digits
-        $this->assertFalse($this->service->isValidFormat('2026/VII/SPP/PROJECT-X/0015')); // 4 digits
-        $this->assertFalse($this->service->isValidFormat('2026/VII/SPP/PROJECT-X/ABC')); // Non-numeric
+        $this->assertFalse($this->service->isValidFormat('2026/VII/SPP/40/15')); // Only 2 digits
+        $this->assertFalse($this->service->isValidFormat('2026/VII/SPP/40/0015')); // 4 digits
+        $this->assertFalse($this->service->isValidFormat('2026/VII/SPP/40/ABC')); // Non-numeric
     }
 
     // ==========================================
@@ -204,12 +207,12 @@ class SppNumberGeneratorServiceTest extends TestCase
     public function it_handles_year_rollover()
     {
         // December 2025
-        $dec2025 = '2025/XII/SPP/PROJECT-X/150';
+        $dec2025 = '2025/XII/SPP/40/150';
         $parsedDec = $this->service->parseNumber($dec2025);
         $this->assertEquals('2025', $parsedDec['tahun']);
 
         // January 2026 (should start from 001)
-        $jan2026 = '2026/I/SPP/PROJECT-X/001';
+        $jan2026 = '2026/I/SPP/40/001';
         $parsedJan = $this->service->parseNumber($jan2026);
         $this->assertEquals('2026', $parsedJan['tahun']);
         $this->assertEquals(1, $parsedJan['no_urut']);
@@ -221,7 +224,7 @@ class SppNumberGeneratorServiceTest extends TestCase
         $months = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
 
         foreach ($months as $month) {
-            $noSurat = "2026/{$month}/SPP/PROJECT-X/001";
+            $noSurat = "2026/{$month}/SPP/40/001";
             $this->assertTrue(
                 $this->service->isValidFormat($noSurat),
                 "Failed to validate month: {$month}"
@@ -247,7 +250,7 @@ class SppNumberGeneratorServiceTest extends TestCase
             $this->assertEquals($seq['expected'], $padded);
 
             // Verify format is valid
-            $noSurat = "2026/VII/SPP/PROJECT-X/{$padded}";
+            $noSurat = "2026/VII/SPP/40/{$padded}";
             $this->assertTrue($this->service->isValidFormat($noSurat));
         }
     }

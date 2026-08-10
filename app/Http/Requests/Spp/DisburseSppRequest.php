@@ -16,6 +16,7 @@ class DisburseSppRequest extends FormRequest
     {
         return [
             'no_surat' => 'required|string|exists:surat_permintaan,no_surat',
+            'biaya_admin' => 'nullable|numeric|min:0',
         ];
     }
 
@@ -24,6 +25,8 @@ class DisburseSppRequest extends FormRequest
         return [
             'no_surat.required' => 'Nomor SPP wajib diisi.',
             'no_surat.exists' => 'SPP dengan nomor tersebut tidak ditemukan.',
+            'biaya_admin.numeric' => 'Biaya admin harus berupa angka.',
+            'biaya_admin.min' => 'Biaya admin tidak boleh negatif.',
         ];
     }
 }

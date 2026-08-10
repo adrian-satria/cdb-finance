@@ -145,9 +145,22 @@
                         <span class="text-secondary">No. Surat</span>
                         <span class="fw-bold text-dark" id="cairkanNoSurat">-</span>
                     </div>
-                    <div class="d-flex justify-content-between small">
+                    <div class="d-flex justify-content-between small mb-1">
                         <span class="text-secondary">Total Dana</span>
                         <span class="fw-bold text-primary" id="cairkanNominal">Rp 0</span>
+                    </div>
+                    <div class="d-flex justify-content-between small align-items-center mt-2 pt-2 border-top">
+                        <span class="text-secondary">Biaya Admin</span>
+                        <div class="input-group input-group-sm" style="max-width: 200px;">
+                            <span class="input-group-text bg-white">Rp</span>
+                            <input type="text" name="biaya_admin" id="cairkanBiayaAdmin"
+                                class="form-control form-control-sm text-end fw-bold"
+                                value="0" oninput="hitungTotalCair(this)">
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between small mt-2 pt-2 border-top">
+                        <span class="text-secondary fw-bold">Total Dibayarkan</span>
+                        <span class="fw-bold text-success" id="cairkanTotalBayar">Rp 0</span>
                     </div>
                 </div>
                 <form id="formCairkan" method="POST" action="">
@@ -183,6 +196,25 @@
         }
     }
 
+    function hitungTotalCair(input) {
+        const nominal = parseInt(document.getElementById('cairkanNominal').getAttribute('data-raw') || 0);
+        const biaya = parseInt(input.value.replace(/[^0-9]/g, '') || 0);
+        const total = nominal + biaya;
+        document.getElementById('cairkanTotalBayar').innerText = 'Rp ' + total.toLocaleString('id-ID');
+    }
+
+    function formatBiayaAdmin(input) {
+        let raw = input.value.replace(/[^0-9]/g, '');
+        if (raw === '') { input.value = '0'; return; }
+        input.value = parseInt(raw).toLocaleString('id-ID');
+        hitungTotalCair(input);
+    }
+
+    document.querySelector('form[action*="cairkan"]')?.addEventListener('submit', function() {
+        const input = document.getElementById('cairkanBiayaAdmin');
+        input.value = input.value.replace(/[^0-9]/g, '') || '0';
+    });
+
     document.addEventListener('click', function(e) {
         var btn = e.target.closest('[data-action="cairkan-spp"]');
         var noSurat, nominal;
@@ -194,6 +226,9 @@
             document.getElementById('cairkanInputSurat').value = noSurat;
             document.getElementById('cairkanNoSurat').innerText = noSurat;
             document.getElementById('cairkanNominal').innerText = 'Rp ' + nominal.toLocaleString('id-ID');
+            document.getElementById('cairkanNominal').setAttribute('data-raw', nominal);
+            document.getElementById('cairkanBiayaAdmin').value = '0';
+            document.getElementById('cairkanTotalBayar').innerText = 'Rp ' + nominal.toLocaleString('id-ID');
             new bootstrap.Modal(document.getElementById('modalCairkan')).show();
             return;
         }

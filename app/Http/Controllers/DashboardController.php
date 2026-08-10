@@ -6,6 +6,7 @@ use App\Models\Project;
 use App\Support\RoleHelper;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
@@ -114,7 +115,7 @@ class DashboardController extends Controller
 
         // --- Projects for Admin Filter ---
         $projects = RoleHelper::isGlobal($role)
-            ? Project::orderBy('kode_project')->get()
+            ? Cache::remember('ref_projects', 3600, fn() => Project::orderBy('kode_project')->get())
             : collect();
 
         return view('dashboard.index', compact(

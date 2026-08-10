@@ -6,6 +6,8 @@ use App\Http\Controllers\Admin\BudgetController;
 use App\Http\Controllers\Admin\BudgetImportController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\SystemSettingController;
+use App\Http\Controllers\Admin\AreaController;
+use App\Http\Controllers\Admin\ProjectController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
@@ -68,6 +70,26 @@ Route::middleware(['auth', 'validate.session'])->group(function () {
         // Admin access management (user_access)
 
         // (routes for access management moved to routes/admin.php)
+
+        // --- CRUD Project ---
+        Route::get('/project', [ProjectController::class, 'index'])->name('project.index');
+        Route::get('/project/create', [ProjectController::class, 'create'])->name('project.create');
+        Route::post('/project/store', [ProjectController::class, 'store'])->name('project.store')->middleware('throttle:30,1');
+        Route::get('/project/{project}/edit', [ProjectController::class, 'edit'])->name('project.edit');
+        Route::put('/project/{project}/update', [ProjectController::class, 'update'])->name('project.update')->middleware('throttle:30,1');
+        Route::delete('/project/{project}/delete', [ProjectController::class, 'destroy'])->name('project.destroy')->middleware('throttle:30,1');
+
+        // --- CRUD Area ---
+        Route::get('/area', [AreaController::class, 'index'])->name('area.index');
+        Route::get('/area/create', [AreaController::class, 'create'])->name('area.create');
+        Route::post('/area/store', [AreaController::class, 'store'])->name('area.store')->middleware('throttle:30,1');
+        Route::get('/area/{area}/edit', [AreaController::class, 'edit'])->name('area.edit');
+        Route::put('/area/{area}/update', [AreaController::class, 'update'])->name('area.update')->middleware('throttle:30,1');
+        Route::delete('/area/{area}/delete', [AreaController::class, 'destroy'])->name('area.destroy')->middleware('throttle:30,1');
+
+        // --- Budget Per Area ---
+        Route::get('/budget/{id}/area', [BudgetController::class, 'areaForm'])->name('budget.area');
+        Route::post('/budget/{id}/area/store', [BudgetController::class, 'areaStore'])->name('budget.area.store')->middleware('throttle:30,1');
 
         // --- CRUD Master Budget (Aman & Terpantau) ---
 

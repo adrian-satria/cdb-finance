@@ -19,6 +19,7 @@ use App\Support\RoleHelper;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -37,14 +38,36 @@ class SppController extends Controller
     // =========================================================================
     public function create()
     {
-        $nomor_baru = $this->numberService->generatePreviewNumber(now()->format('Y-m-d'));
+        $userProject = session('kode_project');
+        $nomor_baru = $this->numberService->generatePreviewNumber(now()->format('Y-m-d'), $userProject ?? 'XX');
 
-        $projects = Project::all();
-        $master_budgets = DB::table('master_budget')->get()->groupBy('kode_project');
-        $areas = Area::all();
-        $sumber_danas = SumberDana::all();
+        $projects = Cache::remember('ref_projects', 3600, fn() => Project::orderBy('kode_project')->get());
+        $role = session('role');
+        $userProject = session('kode_project');
+        
+        $budgetQuery = DB::table('master_budget');
+        if (RoleHelper::isProjectScoped($role) && $userProject !== null && $userProject !== '' && $userProject !== 'all') {
+            $budgetQuery->where('kode_project', $userProject);
+        }
+        $master_budgets = $budgetQuery->get()->groupBy('kode_project');
+        
+        $sumber_danas = Cache::remember('ref_sumber_danas', 3600, fn() => SumberDana::all());
+        $noBudgetProjects = config('spp_workflow.no_budget_projects', []);
 
-        return view('spp.tambah', compact('nomor_baru', 'projects', 'areas', 'sumber_danas', 'master_budgets'));
+        if (RoleHelper::isStaffArea($role)) {
+            $areas = Area::where('kode_area', session('kode_area'))->get();
+            $isAreaLocked = true;
+        } elseif (RoleHelper::isGlobal($role) && (!$userProject || $userProject === 'all')) {
+            $areas = Cache::remember('ref_areas', 3600, fn() => Area::all());
+            $isAreaLocked = false;
+        } else {
+            $areas = Area::whereIn('kode_area', function ($q) use ($userProject) {
+                $q->select('kode_area')->from('project_area')->where('kode_project', $userProject);
+            })->get();
+            $isAreaLocked = false;
+        }
+
+        return view('spp.tambah', compact('nomor_baru', 'projects', 'areas', 'sumber_danas', 'master_budgets', 'noBudgetProjects', 'isAreaLocked'));
     }
 
     // =========================================================================
@@ -54,8 +77,14 @@ class SppController extends Controller
     {
         try {
             return DB::transaction(function () use ($request) {
-                // 1. Validate Budget Ceiling & Get Total Nominal
-                $validation = $this->budgetService->lockAndValidateMultiple($request->items);
+                $kodeArea = $request->kode_area ?? (session('kode_area') ?? 'PUSAT');
+
+                // 1. Validate Budget Ceiling & Get Total Nominal (per-area)
+                $validation = $this->budgetService->lockAndValidateMultiple(
+                    $request->items,
+                    $kodeArea,
+                    $request->kode_project
+                );
 
                 if (! $validation->isValid) {
                     throw new \Exception($validation->errorMessage);
@@ -64,7 +93,7 @@ class SppController extends Controller
                 $totalNominal = $validation->details['total_nominal'];
 
                 // 2. Generate SPP Number
-                $nomorBaru = $this->numberService->generateNextNumber($request->tanggal);
+                $nomorBaru = $this->numberService->generateNextNumber($request->tanggal, $request->kode_project);
 
                 // 3. Determine Initial Workflow Position
                 $posisiAwal = $this->workflowService->determineInitialPosition($request->kode_project);
@@ -75,7 +104,7 @@ class SppController extends Controller
                     'tanggal' => $request->tanggal,
                     'jenis_permintaan' => $request->jenis_permintaan ?? 'PROJECT',
                     'kode_project' => $request->kode_project,
-                    'kode_area' => $request->kode_area ?? (session('kode_area') ?? 'PUSAT'),
+                    'kode_area' => $kodeArea,
                     'sumber_dana' => $request->sumber_dana,
                     'bank_tujuan' => $request->bank_tujuan,
                     'no_rekening_tujuan' => $request->no_rekening_tujuan,
@@ -86,15 +115,15 @@ class SppController extends Controller
                     'id_maker' => Auth::user()->id_user,
                 ]);
 
-                // 5. Create Detail Items
-                foreach ($request->items as $item) {
-                    DB::table('surat_permintaan_detail')->insert([
-                        'no_surat' => $nomorBaru,
-                        'keterangan' => $item['keterangan'] ?? '-',
-                        'kode_budget' => $item['kode_budget'],
-                        'nominal' => $item['jumlah'],
-                    ]);
-                }
+                // 5. Create Detail Items (batch insert)
+                $detailRecords = array_map(fn($item) => [
+                    'no_surat' => $nomorBaru,
+                    'keterangan' => $item['keterangan'] ?? '-',
+                    'kode_budget' => $item['kode_budget'],
+                    'nominal' => $item['jumlah'],
+                ], $request->items);
+
+                DB::table('surat_permintaan_detail')->insert($detailRecords);
 
                 // 6. Handle File Uploads
                 if ($request->hasFile('file_lampiran')) {
@@ -116,6 +145,15 @@ class SppController extends Controller
                     'SPP',
                     $nomorBaru
                 );
+
+                // 8. Overspend warning
+                if ($validation->isOverBudget) {
+                    $defisitFormat = number_format($validation->defisit, 0, ',', '.');
+                    return redirect('/spp')->with('success', 'Pengajuan dana SPP berhasil dikirim!')->with(
+                        'warning',
+                        "⚠️ PERHATIAN: Terdapat budget yang melebihi pagu! Defisit total: Rp {$defisitFormat}. Pastikan ada penutupan dari budget lain."
+                    );
+                }
 
                 return redirect('/spp')->with('success', 'Pengajuan dana SPP baru berhasil dikirim dan lolos verifikasi pagu anggaran!');
             });
@@ -183,7 +221,7 @@ class SppController extends Controller
         });
 
         if (RoleHelper::isGlobal($role) || ($userProject === null || $userProject === '' || $userProject === 'all')) {
-            $projects = Project::orderBy('kode_project')->get();
+            $projects = Cache::remember('ref_projects', 3600, fn() => Project::orderBy('kode_project')->get());
         } elseif (RoleHelper::isProjectScoped($role) && $userProject !== null && $userProject !== '' && $userProject !== 'all') {
             $projects = Project::where('kode_project', $userProject)->get();
         } else {
@@ -322,7 +360,29 @@ class SppController extends Controller
                     ? "Pengajuan berhasil diproses! Aliran dokumen diteruskan ke: {$result['next']}."
                     : 'Pengajuan SPP resmi ditolak.';
 
-                return redirect('/spp')->with('success', $feedbackSuccess);
+                $redirect = redirect('/spp')->with('success', $feedbackSuccess);
+
+                // Check overspend warning
+                $noBudgetProjects = config('spp_workflow.no_budget_projects', []);
+                if (! in_array($surat->kode_project, $noBudgetProjects, true)) {
+                    $items = DB::table('surat_permintaan_detail')
+                        ->where('no_surat', $surat->no_surat)
+                        ->get();
+                    foreach ($items as $item) {
+                        $remaining = $this->budgetService->calculateRemainingBudget($item->kode_budget, $surat->kode_area);
+                        if (bccomp('0', $remaining, 2) === 1) {
+                            $defisit = bcsub('0', $remaining, 2);
+                            $defisitFormat = number_format($defisit, 0, ',', '.');
+                            $redirect->with(
+                                'warning',
+                                "⚠️ Budget {$item->kode_budget} minus Rp {$defisitFormat}. Pastikan ada penutupan dari budget lain."
+                            );
+                            break;
+                        }
+                    }
+                }
+
+                return $redirect;
             });
         } catch (\Exception $e) {
             Log::error('SPP validasi failed', [
@@ -358,29 +418,20 @@ class SppController extends Controller
                     ->where('no_surat', $surat->no_surat)
                     ->get();
 
-                foreach ($items as $item) {
-                    $budget = DB::table('master_budget')
-                        ->where('kode_budget', $item->kode_budget)
-                        ->lockForUpdate()
-                        ->first();
+                $biayaAdmin = (string) ($request->biaya_admin ?? 0);
+                $totalDibayar = bcadd((string) $surat->total_nominal, $biayaAdmin, 2);
 
-                    if (! $budget) {
-                        throw new \Exception("Budget {$item->kode_budget} tidak ditemukan.");
-                    }
-
-                    $newTerserap = bcadd((string) $budget->terserap, (string) $item->nominal, 2);
-                    if (bccomp($newTerserap, (string) $budget->alokasi_dana, 2) === 1) {
-                        throw new \Exception("Budget {$item->kode_budget} melebihi alokasi (Rp " . number_format($budget->alokasi_dana, 0, ',', '.') . ").");
-                    }
-
-                    DB::table('master_budget')
-                        ->where('kode_budget', $item->kode_budget)
-                        ->increment('terserap', $item->nominal);
-                }
+                $this->budgetService->updateTerserap(
+                    $items->toArray(),
+                    $surat->kode_area,
+                    $surat->kode_project,
+                    $biayaAdmin
+                );
 
                 $surat->update([
                     'status_surat' => 'Disbursed',
                     'posisi_saat_ini' => 'FINISH',
+                    'biaya_admin' => $biayaAdmin,
                     'updated_at' => now(),
                 ]);
 

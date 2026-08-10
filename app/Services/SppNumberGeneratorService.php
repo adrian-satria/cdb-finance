@@ -7,25 +7,17 @@ use Illuminate\Support\Facades\DB;
 
 class SppNumberGeneratorService
 {
-    public function __construct(
-        protected string $sppPrefix = 'PROJECT-X'
-    ) {}
-
-    public function setSppPrefix(string $prefix): void
-    {
-        $this->sppPrefix = $prefix;
-    }
-
     /**
-     * Generate the next SPP number based on date.
-     * Format: YYYY/MM/SPP/PROJECT-X/NNN
+     * Generate the next SPP number (global sequence across all projects).
+     * Format: YYYY/RomanMonth/SPP/KodeProject/NNN
      *
      * @param  string  $tanggal  Date in Y-m-d format
+     * @param  string  $kodeProject  Project code (shown in number, sequence is global)
      * @return string Generated SPP number
      *
      * @throws Exception if collision detected
      */
-    public function generateNextNumber(string $tanggal): string
+    public function generateNextNumber(string $tanggal, string $kodeProject = 'XX'): string
     {
         $tahun = (int) date('Y', strtotime($tanggal));
         $bulanIndex = (int) date('n', strtotime($tanggal));
@@ -33,7 +25,6 @@ class SppNumberGeneratorService
 
         $terakhir = DB::table('surat_permintaan')
             ->whereYear('created_at', $tahun)
-            ->whereRaw('MONTH(created_at) = ?', [$bulanIndex])
             ->orderBy('created_at', 'desc')
             ->lockForUpdate()
             ->first();
@@ -44,7 +35,7 @@ class SppNumberGeneratorService
             $noUrut = 1;
         }
 
-        $nomorBaru = $tahun.'/'.$bulanRomawi."/SPP/{$this->sppPrefix}/".str_pad($noUrut, 3, '0', STR_PAD_LEFT);
+        $nomorBaru = $tahun.'/'.$bulanRomawi."/SPP/{$kodeProject}/".str_pad($noUrut, 3, '0', STR_PAD_LEFT);
 
         if ($this->checkCollision($nomorBaru)) {
             throw new Exception("Collision detected for SPP number: {$nomorBaru}");
@@ -85,30 +76,30 @@ class SppNumberGeneratorService
     /**
      * Parse SPP number to extract components.
      *
-     * @return array ['tahun', 'bulan', 'no_urut']
+     * @return array ['tahun', 'bulan', 'kode_project', 'no_urut']
      */
     public function parseNumber(string $noSurat): array
     {
-        // Format: 2026/VII/SPP/PROJECT-X/015
+        // Format: 2026/VII/SPP/GLOBAL/015
         $parts = explode('/', $noSurat);
 
         return [
             'tahun' => $parts[0] ?? null,
             'bulan' => $parts[1] ?? null,
+            'kode_project' => $parts[3] ?? null,
             'no_urut' => isset($parts[4]) ? (int) $parts[4] : null,
         ];
     }
 
     /**
-     * Get next sequence number for a given month.
+     * Get next sequence number for a given project, year, and month.
      *
      * @return int Next sequence number
      */
-    public function getNextSequence(int $tahun, int $bulan): int
+    public function getNextSequence(int $tahun, int $bulan, string $kodeProject = 'XX'): int
     {
         $terakhir = DB::table('surat_permintaan')
             ->whereYear('created_at', $tahun)
-            ->whereRaw('MONTH(created_at) = ?', [$bulan])
             ->orderBy('created_at', 'desc')
             ->first();
 
@@ -124,16 +115,17 @@ class SppNumberGeneratorService
      * Safe to use in GET requests.
      *
      * @param  string  $tanggal  Date in Y-m-d format
+     * @param  string  $kodeProject  Project code
      * @return string Preview SPP number (may differ from actual on save)
      */
-    public function generatePreviewNumber(string $tanggal): string
+    public function generatePreviewNumber(string $tanggal, string $kodeProject = 'XX'): string
     {
         $tahun = (int) date('Y', strtotime($tanggal));
         $bulanIndex = (int) date('n', strtotime($tanggal));
         $bulanRomawi = $this->getRomanMonth($bulanIndex);
-        $nextSeq = $this->getNextSequence($tahun, $bulanIndex);
+        $nextSeq = $this->getNextSequence($tahun, $bulanIndex, $kodeProject);
 
-        return $tahun.'/'.$bulanRomawi."/SPP/{$this->sppPrefix}/".str_pad($nextSeq, 3, '0', STR_PAD_LEFT);
+        return $tahun.'/'.$bulanRomawi."/SPP/{$kodeProject}/".str_pad($nextSeq, 3, '0', STR_PAD_LEFT);
     }
 
     /**
@@ -143,10 +135,9 @@ class SppNumberGeneratorService
      */
     public function isValidFormat(string $noSurat): bool
     {
-        // Format: YYYY/RomanMonth/SPP/PROJECT-X/NNN
-        // Example: 2026/VII/SPP/PROJECT-X/015
-        $escapedPrefix = preg_quote($this->sppPrefix, '/');
-        $pattern = '/^\d{4}\/(I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII)\/SPP\/'.$escapedPrefix.'\/\d{3}$/';
+        // Format: YYYY/RomanMonth/SPP/KodeProject/NNN
+        // Example: 2026/VII/SPP/40/015
+        $pattern = '/^\d{4}\/(I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII)\/SPP\/[A-Za-z0-9_-]+\/\d{3}$/';
 
         return preg_match($pattern, $noSurat) === 1;
     }

@@ -8,5 +8,8 @@ class ValidationResult
         public bool $isValid,
         public ?string $errorMessage = null,
         public ?array $details = null,
+        public bool $isOverBudget = false,
+        public string $defisit = '0',
+        public array $overbudgetItems = [],
     ) {}
 }

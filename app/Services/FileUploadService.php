@@ -41,7 +41,7 @@ class FileUploadService
                 throw new \RuntimeException("File {$file->getClientOriginalName()} ditolak: tipe file tidak diizinkan.");
             }
 
-            $ext = $file->getClientOriginalExtension();
+            $ext = $file->extension() ?: $file->getClientOriginalExtension();
             $prefix = strtolower($kategori);
             $namaFile = "{$prefix}_{$noSurat}_{$this->generateUniqueId()}.{$ext}";
 
@@ -77,7 +77,7 @@ class FileUploadService
 
         $this->deleteOldSignature($userId);
 
-        $ext = $file->getClientOriginalExtension();
+        $ext = $file->extension() ?: $file->getClientOriginalExtension();
         $newName = "sig_{$userId}_".time()."_{$this->generateUniqueId()}.{$ext}";
 
         $file->move(storage_path(self::SIGNATURE_STORAGE_PATH), $newName);

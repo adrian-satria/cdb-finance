@@ -60,6 +60,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | No-Budget Projects
+    |--------------------------------------------------------------------------
+    |
+    | Projects listed here do not require budget ceiling validation.
+    | Their SPPs skip master_budget / budget_area checks entirely.
+    |
+    */
+    'no_budget_projects' => ['01', '02', '03', '04', '06', '07'],
+
+    /*
+    |--------------------------------------------------------------------------
     | Workflow Transitions - PROJECT_FLOW (Project 38, 40)
     |--------------------------------------------------------------------------
     |

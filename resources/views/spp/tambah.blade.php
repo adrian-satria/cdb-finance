@@ -18,6 +18,33 @@
                 <h5 class="fw-bold text-dark m-0" style="font-size:20px;">Form Input Surat Permintaan Pembayaran (SPP)</h5>
             </div>
             <div class="card-body p-4">
+                @if(session('success'))
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="fa-solid fa-circle-check me-1"></i>{{ session('success') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
+                @if(session('error'))
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fa-solid fa-circle-xmark me-1"></i>{{ session('error') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
+                @if(session('warning'))
+                    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                        <i class="fa-solid fa-triangle-exclamation me-1"></i>{{ session('warning') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
+                @if($errors->any())
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <strong><i class="fa-solid fa-circle-exclamation me-1"></i>Periksa kembali form:</strong>
+                        <ul class="mb-0 mt-1">
+                            @foreach($errors->all() as $err)<li>{{ $err }}</li>@endforeach
+                        </ul>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
                 <form action="/spp/simpan" method="POST" enctype="multipart/form-data" data-loading>
                     @csrf 
 
@@ -62,17 +89,26 @@
                     <div class="row g-3 mb-4">
                         <div class="col-md-3">
                             <label class="form-label-custom">Area Otorisasi</label>
-                            <select name="kode_area" class="form-select-custom" required>
+                            <select name="kode_area" class="form-select-custom" required {{ $isAreaLocked ? 'disabled' : '' }}>
                                 @foreach($areas as $a)
                                     <option value="{{ $a->kode_area }}" {{ session('kode_area') == $a->kode_area ? 'selected' : '' }}>{{ $a->nama_area }}</option>
                                 @endforeach
                             </select>
+                            @if($isAreaLocked)
+                                <input type="hidden" name="kode_area" value="{{ session('kode_area') }}">
+                                <small class="text-muted">Area sesuai unit kerja Anda.</small>
+                            @endif
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-6" id="budgetMasterSection">
                             <label class="form-label-custom">Kode Budget (Master)</label>
                             <select name="kode_budget_master" id="budgetMasterSelect" class="form-select-custom" required onchange="syncBudgetToRows()">
                                 <option value="">-- Pilih Kode Budget --</option>
                             </select>
+                        </div>
+                        <div class="col-md-6 d-none" id="noBudgetSection">
+                            <label class="form-label-custom">Kode Budget</label>
+                            <input type="text" name="kode_budget_master" class="form-control-custom" value="NO-BUDGET" readonly>
+                            <small class="text-muted">Project tanpa budget line. Kode otomatis terisi NO-BUDGET.</small>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label-custom">Sumber Dana</label>
@@ -172,6 +208,18 @@
 
 <script>
     const budgetData = @json($master_budgets);
+    const noBudgetProjects = @json($noBudgetProjects);
+
+    function isNoBudgetProject() {
+        const project = document.getElementById('projectSelect').value;
+        return noBudgetProjects.includes(project);
+    }
+
+    function toggleBudgetSection() {
+        const noBudget = isNoBudgetProject();
+        document.getElementById('budgetMasterSection')?.classList.toggle('d-none', noBudget);
+        document.getElementById('noBudgetSection')?.classList.toggle('d-none', !noBudget);
+    }
 
     function showSumberDanaDetail(sel) {
         const opt = sel.options[sel.selectedIndex];
@@ -187,6 +235,7 @@
 
     // 1. Fungsi filter dropdown master berdasarkan project yang dipilih
     function filterBudgetMaster() {
+        toggleBudgetSection();
         const projectSelected = document.getElementById('projectSelect').value;
         const budgetMaster = document.getElementById('budgetMasterSelect');
 
@@ -215,6 +264,8 @@
 
     // 2. Sinkronisasi nilai dari Master Dropdown ke semua baris input tabel rincian di bawah secara otomatis
     function syncBudgetToRows() {
+        if (isNoBudgetProject()) return;
+
         const masterValue = document.getElementById('budgetMasterSelect').value;
         const rowInputs = document.querySelectorAll('.row-budget-input');
 
@@ -241,8 +292,16 @@
         const alertMasterReq = document.getElementById('budgetMasterRequiredAlert');
         const submitBtn = document.getElementById('submitSppBtn');
 
-        const masterValue = document.getElementById('budgetMasterSelect').value;
         const projectSelected = document.getElementById('projectSelect').value;
+
+        if (noBudgetProjects.includes(projectSelected)) {
+            submitBtn.disabled = false;
+            alertCeiling?.classList.add('d-none');
+            alertMasterReq?.classList.add('d-none');
+            return;
+        }
+
+        const masterValue = document.getElementById('budgetMasterSelect').value;
 
         const rows = document.querySelectorAll('#detailTable tbody tr');
         let anyInvalid = false;
@@ -271,14 +330,6 @@
                     // kalau masterRow tidak ketemu berarti data budget master tidak sesuai project
                     anyInvalid = true;
                     invalidMessage = 'Kode Budget [ ' + kodeBudget + ' ] tidak ditemukan di master. Silakan pilih ulang Project & Master Budget.';
-                    break;
-                }
-
-                // alokasi_dana & terserap dari master_budget (angka/digit/decimal)
-                const sisaSaldo = moneyToInt(masterRow.alokasi_dana) - moneyToInt(masterRow.terserap);
-                if (jumlahNum > sisaSaldo + 1e-9) {
-                    anyInvalid = true;
-                    invalidMessage = 'Nominal item melebihi sisa saldo budget. Sisa untuk [' + (masterRow.nama_budget || kodeBudget) + '] adalah ' + sisaSaldo.toLocaleString('id-ID') + '.';
                     break;
                 }
             }
@@ -313,7 +364,9 @@
     // 3. Tambah Baris Baru (Otomatis langsung mengambil isi dari Budget Master yang sedang aktif)
     function tambahBarisTabel() {
         const tableBody = document.querySelector('#detailTable tbody');
-        const masterValue = document.getElementById('budgetMasterSelect').value;
+        const project = document.getElementById('projectSelect').value;
+        const isNoBudget = noBudgetProjects.includes(project);
+        const budgetVal = isNoBudget ? 'NO-BUDGET' : document.getElementById('budgetMasterSelect').value;
         
         const newRow = document.createElement('tr');
         newRow.style.borderBottom = "1px solid #f1f3f4";
@@ -321,7 +374,7 @@
             <td class="text-center row-number fw-semibold text-secondary">${tableBody.children.length + 1}</td>
             <td><input type="text" name="items[${rowIndex}][keterangan]" class="form-control form-control-custom" placeholder="Isi rincian pengeluaran..." required></td>
             <td>
-                <input type="text" name="items[${rowIndex}][kode_budget]" class="form-control-custom row-budget-input" value="${masterValue}" readonly placeholder="Mengikuti Master">
+                <input type="text" name="items[${rowIndex}][kode_budget]" class="form-control-custom row-budget-input" value="${budgetVal}" readonly placeholder="${isNoBudget ? 'No Budget' : 'Mengikuti Master'}">
             </td>
             <td>
                 <div class="input-group input-group-sm">
