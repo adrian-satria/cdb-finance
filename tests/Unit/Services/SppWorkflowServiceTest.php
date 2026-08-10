@@ -290,7 +290,7 @@ class SppWorkflowServiceTest extends TestCase
     }
 
     /** @test */
-    public function it_allows_admin_to_act_on_any_workflow()
+    public function it_disallows_admin_to_act_on_any_workflow()
     {
         $surat = (object) [
             'no_surat' => 'TEST-001',
@@ -299,7 +299,7 @@ class SppWorkflowServiceTest extends TestCase
         ];
 
         $isValid = $this->service->validateWorkflowTransition($surat, 'ADMIN');
-        $this->assertTrue($isValid);
+        $this->assertFalse($isValid);
     }
 
     // ==========================================

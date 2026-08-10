@@ -54,9 +54,10 @@ class SuratPermintaanModelTest extends TestCase
     /** @test */
     public function scope_disbursed_returns_only_disbursed_spp()
     {
-        $this->createSpp(['no_surat' => 'SCD-001', 'status_surat' => 'Disbursed']);
-        $result = SuratPermintaan::disbursed()->get();
+        $spp = $this->createSpp(['no_surat' => 'SCD-001', 'status_surat' => 'Disbursed']);
+        $result = SuratPermintaan::disbursed()->where('no_surat', 'SCD-001')->get();
         $this->assertCount(1, $result);
+        $this->assertEquals('SCD-001', $result->first()->no_surat);
     }
 
     /** @test */

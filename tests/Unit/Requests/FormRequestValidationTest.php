@@ -201,7 +201,7 @@ class FormRequestValidationTest extends TestCase
     }
 
     /** @test */
-    public function disburse_spp_authorize_only_for_kasir_or_admin()
+    public function disburse_spp_authorize_only_for_kasir()
     {
         session(['role' => 'KASIR_PUSAT']);
         $request = new DisburseSppRequest;
@@ -209,7 +209,7 @@ class FormRequestValidationTest extends TestCase
 
         session(['role' => 'ADMIN']);
         $request2 = new DisburseSppRequest;
-        $this->assertTrue($request2->authorize());
+        $this->assertFalse($request2->authorize());
 
         session(['role' => 'MAKER']);
         $request3 = new DisburseSppRequest;

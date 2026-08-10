@@ -37,7 +37,7 @@ class SppObserverTest extends TestCase
             'posisi_saat_ini' => 'MANAGER_KEUANGAN',
         ]);
 
-        $log = DB::table('audit_trails')->where('aksi', 'INSERT_SPP')->first();
+        $log = DB::table('audit_trails')->where('aksi', 'INSERT_SPP')->where('deskripsi', 'like', '%OBS-TEST-001%')->first();
         $this->assertNotNull($log);
         $this->assertStringContainsString('OBS-TEST-001', $log->deskripsi);
     }
@@ -124,6 +124,7 @@ class SppObserverTest extends TestCase
 
         $transitionLog = DB::table('audit_trails')
             ->where('aksi', 'WORKFLOW_TRANSITION')
+            ->where('deskripsi', 'like', '%OBS-TEST-005%')
             ->first();
         $this->assertNotNull($transitionLog);
         $this->assertStringContainsString('AREA_MANAGER', $transitionLog->deskripsi);

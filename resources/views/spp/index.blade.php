@@ -175,6 +175,10 @@
                                         <button type="button" class="btn btn-sm btn-success px-3 rounded-pill" style="font-size: 11.5px; font-weight: 600;" data-action="cairkan-spp" data-no-surat="{{ $s->no_surat }}" data-total-nominal="{{ $s->total_nominal }}">
                                             <i class="fa-solid fa-money-bill-transfer me-1"></i> Cairkan Dana
                                         </button>
+                                    @elseif($s->status_surat == 'Revisi' && $s->posisi_saat_ini == 'MAKER' && (session('role') == 'ADMIN' || (int)$s->id_maker === (int)auth()->id()))
+                                        <a href="/spp/edit?no_surat={{ rawurlencode($s->no_surat) }}" class="btn btn-sm btn-warning px-3 rounded-pill" style="font-size: 11.5px; font-weight: 600;">
+                                            <i class="fa-solid fa-pen-to-square me-1"></i> Perbaiki
+                                        </a>
                                     @else
                                         <span class="text-muted small" style="font-style: italic;">
                                             @if($s->status_surat == 'Disbursed')

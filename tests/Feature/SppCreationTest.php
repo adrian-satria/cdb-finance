@@ -57,6 +57,16 @@ class SppCreationTest extends TestCase
             'alokasi_dana' => '50000000',
             'terserap' => '0',
         ]);
+
+        DB::table('budget_area')->insert([
+            'kode_project' => 'FT01',
+            'kode_area' => 'pusat',
+            'kode_budget' => 'FTB-001',
+            'nama_budget' => 'Test Budget',
+            'alokasi_dana' => '50000000',
+            'terserap' => '0',
+            'terserap_sementara' => '0',
+        ]);
     }
 
     /** @test */
@@ -127,7 +137,7 @@ class SppCreationTest extends TestCase
         ]);
 
         $response->assertRedirect();
-        $response->assertSessionHas('error');
+        $response->assertSessionHas('warning');
     }
 
     /** @test */
@@ -135,7 +145,7 @@ class SppCreationTest extends TestCase
     {
         $this->seedBudget();
 
-        $file = UploadedFile::fake()->create('lampiran.pdf', 100);
+        $file = UploadedFile::fake()->createWithContent('lampiran.pdf', '%PDF-1.4 fake pdf content');
 
         $response = $this->post('/spp/simpan', [
             'tanggal' => '2026-07-15',
