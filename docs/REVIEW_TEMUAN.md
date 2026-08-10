@@ -153,18 +153,18 @@ Settings (session_timeout, max_file_size, maintenance_mode, dll.) bisa di-edit a
 
 ## Prioritas Perbaikan
 
-| Prioritas | Temuan | Tindakan |
-|---|---|---|
-| P0 | B1 role escalation cairkan | cek role eksplisit KASIR_PUSAT |
-| P0 | B2 admin auto-approve | batasi peran ADMIN |
-| P0 | B3 budget double-booking | reservation / hitung pending |
-| P0 | B5 nomor SPP collision | sequence table + unique index |
-| P1 | B4 overspend blocking | kebijakan approval khusus |
-| P1 | B6 scoping di validasi/cairkan | tambah canAccessSpp |
-| P1 | B7 biaya_admin 5x | alokasikan sekali |
-| P1 | S1 login tidak di-log | panggil logLogin |
-| P1 | F3 SPP revisi stuck | endpoint edit/resubmit |
-| P2 | B8, F1, F2, F4, S3, I1–I8 | perbaikan bertahap |
+| Prioritas | Temuan | Tindakan | Status |
+|---|---|---|---|
+| P0 | B1 role escalation cairkan | cek role eksplisit KASIR_PUSAT | ✅ FIXED (branch `fix/p0-security-critical`) |
+| P0 | B2 admin auto-approve | batasi peran ADMIN | ✅ FIXED (ADMIN read-only) |
+| P0 | B3 budget double-booking | reservation / hitung pending | ✅ FIXED (`terserap_sementara`) |
+| P0 | B5 nomor SPP collision | sequence table + unique index | ✅ FIXED (`spp_sequences` atomic) |
+| P1 | B4 overspend blocking | kebijakan approval khusus | ⏳ belum |
+| P1 | B6 scoping di validasi/cairkan | tambah canAccessSpp | ⏳ belum |
+| P1 | B7 biaya_admin 5x | alokasikan sekali | ⏳ belum |
+| P1 | S1 login tidak di-log | panggil logLogin | ⏳ belum |
+| P1 | F3 SPP revisi stuck | endpoint edit/resubmit | ⏳ belum |
+| P2 | B8, F1, F2, F4, S3, I1–I8 | perbaikan bertahap | ⏳ belum |
 
 ---
 *Dokumen ini dibuat otomatis dari hasil review kode. Verifikasi tiap klaim dengan pembacaan kode terkait sebelum eksekusi perubahan.*
