@@ -171,6 +171,133 @@ class SppController extends Controller
     }
 
     // =========================================================================
+    // FORM PERBAIKAN SPP REVISI (Maker - F3 Fix)
+    // =========================================================================
+    public function edit(Request $request)
+    {
+        $noSurat = $request->query('no_surat');
+
+        $surat = SuratPermintaan::with('details', 'files')->where('no_surat', $noSurat)->first();
+
+        if (! $surat) {
+            return redirect('/spp')->with('error', 'SPP tidak ditemukan.');
+        }
+
+        if ($surat->status_surat !== 'Revisi' || $surat->posisi_saat_ini !== 'MAKER') {
+            return redirect('/spp')->with('error', 'SPP ini tidak dalam status Revisi.');
+        }
+
+        if ((int) $surat->id_maker !== (int) Auth::id() && session('role') !== 'ADMIN') {
+            abort(403, 'Hanya pembuat SPP yang dapat memperbaiki.');
+        }
+
+        return view('spp.edit', compact('surat'));
+    }
+
+    // =========================================================================
+    // PROSES KIRIM ULANG SPP REVISI (Maker - F3 Fix)
+    // =========================================================================
+    public function update(StoreSppRequest $request)
+    {
+        $noSurat = $request->input('no_surat');
+
+        try {
+            return DB::transaction(function () use ($request, $noSurat) {
+                $surat = SuratPermintaan::where('no_surat', $noSurat)->lockForUpdate()->first();
+
+                if (! $surat || $surat->status_surat !== 'Revisi' || $surat->posisi_saat_ini !== 'MAKER') {
+                    throw new \Exception('SPP tidak ditemukan atau tidak dalam status Revisi.');
+                }
+
+                if ((int) $surat->id_maker !== (int) Auth::id()) {
+                    throw new \Exception('Hanya pembuat SPP yang dapat memperbaiki.');
+                }
+
+                $kodeArea = $surat->kode_area;
+
+                // Release reservasi lama, validasi ulang, reserve yang baru
+                $oldItems = DB::table('surat_permintaan_detail')
+                    ->where('no_surat', $noSurat)
+                    ->get(['kode_budget', 'nominal'])
+                    ->toArray();
+
+                $this->budgetService->releaseReservation($oldItems, $kodeArea, $surat->kode_project);
+
+                $validation = $this->budgetService->lockAndValidateMultiple(
+                    $request->items,
+                    $kodeArea,
+                    $surat->kode_project
+                );
+
+                if (! $validation->isValid) {
+                    throw new \Exception($validation->errorMessage);
+                }
+
+                $totalNominal = $validation->details['total_nominal'];
+
+                $this->budgetService->reserveBudget($request->items, $kodeArea, $surat->kode_project);
+
+                // Reset ke awal workflow
+                $posisiAwal = $this->workflowService->determineInitialPosition($surat->kode_project);
+
+                $surat->update([
+                    'tanggal' => $request->tanggal,
+                    'sumber_dana' => $request->sumber_dana ?? $surat->sumber_dana,
+                    'bank_tujuan' => $request->bank_tujuan ?? $surat->bank_tujuan,
+                    'no_rekening_tujuan' => $request->no_rekening_tujuan ?? $surat->no_rekening_tujuan,
+                    'nama_rekening_tujuan' => $request->nama_rekening_tujuan ?? $surat->nama_rekening_tujuan,
+                    'total_nominal' => $totalNominal,
+                    'status_surat' => 'Pending',
+                    'posisi_saat_ini' => $posisiAwal,
+                    'keterangan_checker' => null,
+                    'updated_at' => now(),
+                ]);
+
+                // Ganti seluruh item
+                DB::table('surat_permintaan_detail')->where('no_surat', $noSurat)->delete();
+
+                $detailRecords = array_map(fn($item) => [
+                    'no_surat' => $noSurat,
+                    'keterangan' => $item['keterangan'] ?? '-',
+                    'kode_budget' => $item['kode_budget'],
+                    'nominal' => $item['jumlah'],
+                ], $request->items);
+
+                DB::table('surat_permintaan_detail')->insert($detailRecords);
+
+                // Upload lampiran tambahan
+                if ($request->hasFile('file_lampiran')) {
+                    $this->fileService->uploadSppAttachments(
+                        $request->file('file_lampiran'),
+                        $noSurat,
+                        'MAKER'
+                    );
+                }
+
+                // Notifikasi ke posisi pertama
+                $this->notificationService->sendToRole(
+                    $posisiAwal,
+                    NotificationService::TYPE_PENDING_APPROVAL,
+                    "SPP Diperbaiki - {$noSurat}",
+                    "SPP {$noSurat} telah diperbaiki maker dan dikirim ulang untuk persetujuan {$posisiAwal}.",
+                    'SPP',
+                    $noSurat
+                );
+
+                return redirect('/spp')->with('success', "SPP {$noSurat} berhasil diperbaiki dan dikirim ulang. Menunggu persetujuan {$posisiAwal}.");
+            });
+        } catch (\Exception $e) {
+            Log::error('SPP update failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'no_surat' => $noSurat ?? null,
+            ]);
+
+            return redirect()->back()->withInput()->with('error', $e->getMessage() ?: 'Gagal memperbaiki SPP. Silakan coba kembali.');
+        }
+    }
+
+    // =========================================================================
     // Halaman Riwayat Transaksi SPP (Index)
     // =========================================================================
     public function index(Request $request)

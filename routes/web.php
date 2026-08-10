@@ -45,6 +45,8 @@ Route::middleware(['auth', 'validate.session'])->group(function () {
     Route::get('/spp/kelola', [SppController::class, 'kelola']);
     Route::get('/spp/tambah', [SppController::class, 'create']);
     Route::post('/spp/simpan', [SppController::class, 'store'])->middleware('throttle:30,1');
+    Route::get('/spp/edit', [SppController::class, 'edit']);
+    Route::post('/spp/update', [SppController::class, 'update'])->middleware('throttle:30,1');
     Route::post('/spp/validasi', [SppController::class, 'validasi'])->middleware('throttle:30,1');
     Route::post('/spp/cairkan', [SppController::class, 'cairkan'])->middleware('throttle:10,1');
 
