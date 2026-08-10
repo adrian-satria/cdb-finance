@@ -96,9 +96,9 @@ class SppWorkflowService
      */
     public function validateWorkflowTransition(object $surat, string $currentRole): bool
     {
-        // Admin can act on behalf of any role
+        // ADMIN adalah read-only auditor, tidak bisa approve/revise/reject
         if ($currentRole === 'ADMIN') {
-            return true;
+            return false;
         }
 
         // Check if current role matches SPP's current position

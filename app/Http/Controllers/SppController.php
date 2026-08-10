@@ -295,15 +295,13 @@ class SppController extends Controller
                     throw new \Exception('Data pengajuan SPP tidak ditemukan!');
                 }
 
-                $effectiveRole = ($currentRole === 'ADMIN') ? $surat->posisi_saat_ini : $currentRole;
-
-                if (! $this->workflowService->validateWorkflowTransition($surat, $effectiveRole)) {
+                if (! $this->workflowService->validateWorkflowTransition($surat, $currentRole)) {
                     throw new \Exception("WORKFLOW VIOLATION: Berkas ini sedang berada dalam otoritas [{$surat->posisi_saat_ini}], bukan di meja kerja Anda!");
                 }
 
                 $totalNominal = (string) $surat->total_nominal;
                 $result = $this->workflowService->getNextPosition(
-                    $effectiveRole,
+                    $currentRole,
                     $surat->kode_project,
                     $totalNominal,
                     $request->aksi
@@ -337,13 +335,13 @@ class SppController extends Controller
                     if ($result['next'] === 'MAKER') {
                         $this->notificationService->sendToUser(
                             $surat->id_maker, $notifType, $notifTitle,
-                            "SPP {$id} direvisi oleh {$effectiveRole}. Silakan perbaiki dan kirim ulang.",
+                            "SPP {$id} direvisi oleh {$currentRole}. Silakan perbaiki dan kirim ulang.",
                             'SPP', $id
                         );
                     } else {
                         $this->notificationService->sendToRole(
                             $result['next'], $notifType, $notifTitle,
-                            "SPP {$id} telah disetujui oleh {$effectiveRole}. Sekarang menunggu persetujuan {$result['next']}.",
+                            "SPP {$id} telah disetujui oleh {$currentRole}. Sekarang menunggu persetujuan {$result['next']}.",
                             'SPP', $id
                         );
                     }
@@ -351,7 +349,7 @@ class SppController extends Controller
                     $this->notificationService->sendToUser(
                         $surat->id_maker, NotificationService::TYPE_REJECTED,
                         "Ditolak - {$id}",
-                        "SPP {$id} ditolak oleh {$effectiveRole}. Alasan: ".($request->alasan ?? '-'),
+                        "SPP {$id} ditolak oleh {$currentRole}. Alasan: ".($request->alasan ?? '-'),
                         'SPP', $id
                     );
                 }
