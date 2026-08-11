@@ -126,17 +126,17 @@
 
                         <div class="d-flex justify-content-between align-items-center">
                             <a href="/admin/user" class="btn btn-light px-4 fw-semibold text-secondary">Batal</a>
-
-                            <div class="d-flex gap-2">
-                                <form action="{{ route('admin.user.access.clear', $user->id_user) }}" method="POST" onsubmit="return confirm('Hapus semua akses user ini?')">
-                                    @csrf
-                                    <button type="submit" class="btn btn-outline-danger fw-semibold">Hapus Semua Akses</button>
-                                </form>
-
-                                <button type="submit" class="btn btn-primary px-4 fw-semibold">Simpan Akses</button>
-                            </div>
+                            <button type="submit" class="btn btn-primary px-4 fw-semibold">Simpan Akses</button>
                         </div>
                     </form>
+
+                    <div class="mt-3">
+                        <form action="{{ route('admin.user.access.clear', $user->id_user) }}" method="POST" onsubmit="return confirm('Hapus semua akses user ini?')" class="d-inline">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-outline-danger fw-semibold">Hapus Semua Akses</button>
+                        </form>
+                    </div>
 
                     <template id="role-row-template">
                         <tr>

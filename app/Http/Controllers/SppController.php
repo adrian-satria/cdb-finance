@@ -187,7 +187,7 @@ class SppController extends Controller
             return redirect('/spp')->with('error', 'SPP ini tidak dalam status Revisi.');
         }
 
-        if ((int) $surat->id_maker !== (int) Auth::id() && session('role') !== 'ADMIN') {
+        if ((int) $surat->id_maker !== (int) Auth::id()) {
             abort(403, 'Hanya pembuat SPP yang dapat memperbaiki.');
         }
 

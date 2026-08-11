@@ -225,7 +225,7 @@
                     <tbody>
                         @forelse($tasks as $s)
                         <tr>
-                            <td><a href="javascript:void(0)" class="fw-bold text-dark text-decoration-none" onclick="showDetailSpp('{{ $s->no_surat }}')">{{ $s->no_surat }}</a></td>
+                            <td><a href="javascript:void(0)" class="fw-bold text-dark text-decoration-none" data-action="detail-spp" data-no-surat="{{ $s->no_surat }}" title="Klik untuk lihat rincian anggaran">{{ $s->no_surat }}</a></td>
                             <td><x-badge type="light">{{ $s->kode_project }}</x-badge></td>
                             <td>{{ $s->kode_area }}</td>
                             <td class="text-end fw-semibold">Rp {{ number_format($s->total_nominal, 0, ',', '.') }}</td>

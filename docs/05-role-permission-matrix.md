@@ -16,14 +16,13 @@
 | Data SPP (list) | ✅ | ✅* | ✅* | ✅* | ✅* | ✅ | ✅ | ✅ | ✅* |
 | Input SPP Baru | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Kelola Surat | ✅ | - | - | - | - | ✅ | - | - | - |
-| Validasi SPP | ✅** | - | ✅* | ✅* | ✅* | ✅* | ✅* | - | ✅* |
-| Pencairan Dana | ✅ | - | - | - | - | - | - | ✅ | - |
+| Validasi SPP | - | - | ✅* | ✅* | ✅* | ✅* | ✅* | - | ✅* |
+| Pencairan Dana | - | - | - | - | - | - | - | ✅ | - |
 | Preview/Cetak PDF | ✅ | ✅* | ✅* | ✅* | ✅* | ✅ | ✅ | ✅ | - |
 | Notifikasi | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 Keterangan:
 - ✅* = Scoped by area/project
-- ✅** = ADMIN bisa approve sebagai role manapun (bypass)
 - KOORD* = Semua KOORDINATOR_KEUANGAN, PK, TC, DIKLAT, KLINIK, BATRA, BIDANG
 
 ## 5.3 Matriks Akses Admin
@@ -88,24 +87,35 @@ Digunakan di `downloadFile()`, `cetakPdf()`, `previewPdf()`, `getDetailItems()`.
 Satu user bisa memiliki banyak role (multiple rows di `user_access`).
 
 **Flow:**
-1. Login → if user punya >1 role → redirect ke halaman **pilih_peran**
-2. Pilih role → session di-set dengan role, area, project
-3. Bisa **switch role** kapan saja dari dropdown profil
-4. Setiap request dicek: `ValidateSession` membandingkan session role dengan DB
-5. Jika role tidak valid lagi → logout paksa + log `PRIVILEGE_ESCALATION_ATTEMPT`
+1. Login → role pertama paling atas di `user_access` diaktifkan otomatis saat login
+2. Bisa **switch role** kapan saja dari dropdown profil
+3. Setiap request dicek: `ValidateSession` membandingkan session role dengan DB
+4. Jika role tidak valid lagi → logout paksa + log `PRIVILEGE_ESCALATION_ATTEMPT`
 
-## 5.6 Admin Bypass Workflow
+## 5.6 Admin sebagai Read-Only Auditor
 
-ADMIN dapat melakukan validasi pada SPP yang berada di posisi mana pun:
+**Sejak fix B2, ADMIN TIDAK bisa approve/revise/reject/cairkan SPP.** ADMIN adalah auditor read-only: bisa lihat semua data, super-review via `/spp/kelola`, preview/cetak SPP, akses arsip, dashboard, dan modul Admin (master data, audit trail, laporan, settings).
+
+Penegakan di kode:
 
 ```php
-// SppController::validasi()
-$effectiveRole = ($currentRole === 'ADMIN')
-    ? $surat->posisi_saat_ini
-    : $currentRole;
+// SppWorkflowService::validateWorkflowTransition()
+if ($currentRole === 'ADMIN') {
+    return false; // ADMIN read-only auditor, tidak bisa approve/revise/reject
+}
 ```
 
-Ini memungkinkan ADMIN menyelesaikan SPP yang stuck di suatu posisi.
+Pencairan Dana juga dikunci eksplisit ke KASIR_PUSAT (bukan sekadar role global):
+
+```php
+// DisburseSppRequest::authorize()
+public function authorize(): bool
+{
+    return session('role') === 'KASIR_PUSAT';
+}
+```
+
+Scoping area/project untuk validasi dicek via `RoleHelper::canAccessSpp` di `SppController::validasi()` sebelum state machine dijalankan (fix B6).
 
 ## 5.7 Daftar 17 Role
 

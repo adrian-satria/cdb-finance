@@ -50,7 +50,7 @@ class NotificationController extends Controller
         $notif = Notification::forUser(Auth::id())->findOrFail($id);
         $notif->update(['is_read' => true, 'read_at' => now()]);
 
-        return response()->json(['success' => true]);
+        return redirect()->back();
     }
 
     public function markAllAsRead()

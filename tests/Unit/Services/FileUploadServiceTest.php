@@ -124,8 +124,8 @@ class FileUploadServiceTest extends TestCase
     public function it_creates_file_records_in_database_on_upload()
     {
         $files = [
-            UploadedFile::fake()->create('lampiran1.pdf', 100),
-            UploadedFile::fake()->create('lampiran2.jpg', 200),
+            UploadedFile::fake()->createWithContent('lampiran1.pdf', "%PDF-1.4\n%fakepdf"),
+            UploadedFile::fake()->createWithContent('lampiran2.jpg', "\xFF\xD8\xFF\xE0JFIF"),
         ];
 
         $records = $this->service->uploadSppAttachments($files, 'SPP-TEST-001', 'MAKER');
