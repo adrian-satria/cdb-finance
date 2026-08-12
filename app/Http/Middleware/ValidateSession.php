@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\SystemSetting;
 use App\Models\UserAccess;
 use Closure;
 use Illuminate\Http\Request;
@@ -59,7 +60,10 @@ class ValidateSession
         $lastActivity = session('last_activity', time());
         $inactiveTime = time() - $lastActivity;
 
-        if ($inactiveTime > 7200) {
+        // S3 — timeout dari SystemSetting (menit), default 120 menit
+        $timeoutSeconds = (int) SystemSetting::getValue('session_timeout', 120) * 60;
+
+        if ($inactiveTime > $timeoutSeconds) {
             DB::table('audit_trails')->insert([
                 'username' => Auth::user()->username,
                 'role' => session('role'),

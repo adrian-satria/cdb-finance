@@ -108,6 +108,51 @@ class SppObserverTest extends TestCase
     }
 
     /** @test */
+    public function it_does_not_log_update_spp_for_irrelevant_column()
+    {
+        SuratPermintaan::create([
+            'no_surat' => 'OBS-TEST-006',
+            'tanggal' => now(),
+            'jenis_permintaan' => 'PROJECT',
+            'kode_project' => '38',
+            'status_surat' => 'Pending',
+            'posisi_saat_ini' => 'AREA_MANAGER',
+            'bank_tujuan' => 'BNI',
+        ]);
+
+        $spp = SuratPermintaan::find('OBS-TEST-006');
+        $spp->update(['bank_tujuan' => 'BCA']);
+
+        $updateLog = DB::table('audit_trails')
+            ->where('aksi', 'UPDATE_SPP')
+            ->where('deskripsi', 'like', '%OBS-TEST-006%')
+            ->first();
+        $this->assertNull($updateLog);
+    }
+
+    /** @test */
+    public function it_logs_update_spp_for_relevant_column()
+    {
+        SuratPermintaan::create([
+            'no_surat' => 'OBS-TEST-007',
+            'tanggal' => now(),
+            'jenis_permintaan' => 'PROJECT',
+            'kode_project' => '38',
+            'status_surat' => 'Pending',
+            'posisi_saat_ini' => 'AREA_MANAGER',
+        ]);
+
+        $spp = SuratPermintaan::find('OBS-TEST-007');
+        $spp->update(['total_nominal' => '999999']);
+
+        $updateLog = DB::table('audit_trails')
+            ->where('aksi', 'UPDATE_SPP')
+            ->where('deskripsi', 'like', '%OBS-TEST-007%')
+            ->first();
+        $this->assertNotNull($updateLog);
+    }
+
+    /** @test */
     public function it_captures_position_changes_in_audit_trail()
     {
         SuratPermintaan::create([

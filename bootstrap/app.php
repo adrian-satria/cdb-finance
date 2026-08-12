@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CheckMaintenance;
 use App\Http\Middleware\CheckRole;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\ValidateSession;
@@ -20,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->appendToGroup('web', SecurityHeaders::class);
+        $middleware->appendToGroup('web', CheckMaintenance::class);
     })
 
     ->withExceptions(function (Exceptions $exceptions) {

@@ -49,11 +49,18 @@ class SppObserver
             );
         }
 
-        AuditLogService::log(
-            'UPDATE_SPP',
-            "SPP {$suratPermintaan->no_surat} diperbarui",
-            $original
-        );
+        // F4 — UPDATE_SPP hanya dicatat jika kolom relevan berubah
+        // (tidak lagi mencatat update touch-only / perubahan updated_at)
+        $relevant = ['status_surat', 'posisi_saat_ini', 'total_nominal', 'keterangan_checker', 'biaya_admin'];
+        $relevantChanges = array_intersect_key($changes, array_flip($relevant));
+
+        if ($relevantChanges) {
+            AuditLogService::log(
+                'UPDATE_SPP',
+                "SPP {$suratPermintaan->no_surat} diperbarui",
+                $original
+            );
+        }
     }
 
     /**
