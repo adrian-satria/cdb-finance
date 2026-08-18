@@ -24,6 +24,23 @@ class NotificationService
         return $this->create($userId, $type, $title, $message, $referenceType, $referenceId);
     }
 
+    public function sendToRoleScoped($role, $kodeArea, $kodeProject, $type, $title, $message, $referenceType = null, $referenceId = null): void
+    {
+        if (RoleHelper::isStaffArea($role)) {
+            $this->sendToAreaRoles($kodeArea, $type, $title, $message, $referenceType, $referenceId);
+
+            return;
+        }
+
+        if (RoleHelper::isProjectScoped($role)) {
+            $this->sendToProjectRoles($kodeProject, $type, $title, $message, $referenceType, $referenceId);
+
+            return;
+        }
+
+        $this->sendToRole($role, $type, $title, $message, $referenceType, $referenceId);
+    }
+
     public function sendToProjectRoles($kodeProject, $type, $title, $message, $referenceType = null, $referenceId = null): void
     {
         $roles = RoleHelper::PROJECT_FINANCE_ROLES;

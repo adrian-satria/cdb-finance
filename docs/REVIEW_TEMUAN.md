@@ -164,7 +164,9 @@ Settings (session_timeout, max_file_size, maintenance_mode, dll.) bisa di-edit a
 | P1 | B7 biaya_admin 5x | alokasikan sekali | ✅ FIXED (applied once on first item) |
 | P1 | S1 login tidak di-log | panggil logLogin | ✅ FIXED (logLogin sukses/gagal + logLogout) |
 | P1 | F3 SPP revisi stuck | endpoint edit/resubmit | ✅ FIXED (edit.blade.php + update flow) |
-| P2 | B8, F1, I1–I8 | perbaikan bertahap | ⏳ belum |
+| P2 | B8 notifikasi leak area/project | `sendToRoleScoped` (filter `kode_area`/`kode_project`) | ✅ FIXED |
+| P2 | F1 threshold DIREKTUR by total_nominal | konfirmasi user: biarkan total_nominal (skip) | ⏭️ skip |
+| P2 | I1–I8 | improvement UX | ⏳ belum |
 
 ---
 *Dokumen ini dibuat otomatis dari hasil review kode. Verifikasi tiap klaim dengan pembacaan kode terkait sebelum eksekusi perubahan.*

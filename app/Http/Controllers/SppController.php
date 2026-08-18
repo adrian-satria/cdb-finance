@@ -140,8 +140,10 @@ class SppController extends Controller
                 // Note: Audit log and SppHistory are now handled automatically by SppObserver
 
                 // 7. Send Notification
-                $this->notificationService->sendToRole(
+                $this->notificationService->sendToRoleScoped(
                     $posisiAwal,
+                    $kodeArea,
+                    $request->kode_project,
                     NotificationService::TYPE_NEW_SPP,
                     "SPP Baru - {$nomorBaru}",
                     'SPP baru senilai Rp '.number_format($totalNominal, 0, ',', '.')." dari project {$request->kode_project} membutuhkan persetujuan Anda.",
@@ -275,8 +277,10 @@ class SppController extends Controller
                 }
 
                 // Notifikasi ke posisi pertama
-                $this->notificationService->sendToRole(
+                $this->notificationService->sendToRoleScoped(
                     $posisiAwal,
+                    $kodeArea,
+                    $surat->kode_project,
                     NotificationService::TYPE_PENDING_APPROVAL,
                     "SPP Diperbaiki - {$noSurat}",
                     "SPP {$noSurat} telah diperbaiki maker dan dikirim ulang untuk persetujuan {$posisiAwal}.",
@@ -474,8 +478,8 @@ class SppController extends Controller
                             'SPP', $id
                         );
                     } else {
-                        $this->notificationService->sendToRole(
-                            $result['next'], $notifType, $notifTitle,
+                        $this->notificationService->sendToRoleScoped(
+                            $result['next'], $surat->kode_area, $surat->kode_project, $notifType, $notifTitle,
                             "SPP {$id} telah disetujui oleh {$currentRole}. Sekarang menunggu persetujuan {$result['next']}.",
                             'SPP', $id
                         );
