@@ -60,6 +60,29 @@
                 </a>
                 @endif
             </div>
+
+            <a href="#umSubMenu" data-bs-toggle="collapse" aria-expanded="{{ request()->is('uang-muka*') ? 'true' : 'false' }}" class="sidebar-item {{ request()->is('uang-muka*') ? 'active' : '' }}">
+                <div class="d-flex align-items-center">
+                    <div class="nav-icon"><i class="fa-solid fa-money-bill-wave"></i></div>
+                    <span class="nav-label">Uang Muka (UM)</span>
+                </div>
+                <i class="fa-solid fa-chevron-down toggle-icon fs-7"></i>
+            </a>
+
+            <div class="collapse sidebar-child-menu {{ request()->is('uang-muka*') ? 'show' : '' }}" id="umSubMenu">
+                <a href="/uang-muka" class="{{ request()->is('uang-muka') && !request()->is('uang-muka/tambah') ? 'active' : '' }}">
+                    <i class="fa-solid fa-table-list me-2"></i>Data UM
+                </a>
+                <a href="/uang-muka/tambah" class="{{ request()->is('uang-muka/tambah') ? 'active' : '' }}">
+                    <i class="fa-solid fa-file-circle-plus me-2"></i>Input UM Baru
+                </a>
+                <a href="/uang-muka/lpj" class="{{ request()->is('uang-muka/lpj*') ? 'active' : '' }}">
+                    <i class="fa-solid fa-clipboard-check me-2"></i>LPJ Uang Muka
+                </a>
+                <a href="/uang-muka/reimburse" class="{{ request()->is('uang-muka/reimburse*') ? 'active' : '' }}">
+                    <i class="fa-solid fa-money-bill-trend-up me-2"></i>Reimburse LPJ
+                </a>
+            </div>
             @endif
 
             @if(session('role') == 'ADMIN')

@@ -12,6 +12,8 @@ class FileUploadService
 {
     const SPP_STORAGE_PATH = 'app/private/lampiran_spp';
 
+    const UM_STORAGE_PATH = 'app/private/lampiran_um';
+
     const SIGNATURE_STORAGE_PATH = 'app/private/signatures';
 
     const ALLOWED_MIMES = [
@@ -194,6 +196,55 @@ class FileUploadService
     public function isValidFileSize(UploadedFile $file, int $maxSizeKb = 5120): bool
     {
         return $file->getSize() <= ($maxSizeKb * 1024);
+    }
+
+    public function uploadAttachments(array $files, string $table, string $refColumn, string $noRef, string $storagePath, string $kategori = 'MAKER'): array
+    {
+        $records = [];
+
+        foreach ($files as $file) {
+            if (! $this->isValidMime($file, self::ALLOWED_MIMES)) {
+                throw new \RuntimeException("File {$file->getClientOriginalName()} ditolak: tipe file tidak diizinkan.");
+            }
+
+            $ext = $file->extension() ?: $file->getClientOriginalExtension();
+            $namaFile = strtolower($kategori)."_{$noRef}_{$this->generateUniqueId()}.{$ext}";
+
+            $file->move(storage_path($storagePath), $namaFile);
+
+            DB::table($table)->insert([
+                $refColumn => $noRef,
+                'nama_file' => $namaFile,
+                'kategori' => $kategori,
+                'tipe_file' => $ext,
+            ]);
+
+            $records[] = ['nama_file' => $namaFile, 'kategori' => $kategori, 'tipe_file' => $ext];
+        }
+
+        return $records;
+    }
+
+    public function uploadUangMukaAttachments(array $files, string $noAju, string $kategori = 'MAKER'): array
+    {
+        return $this->uploadAttachments($files, 'pengajuan_uang_muka_files', 'no_aju', $noAju, self::UM_STORAGE_PATH, $kategori);
+    }
+
+    public function downloadUangMukaFile(string $namaFile, ?string $role, ?string $userArea, ?string $userProject): ?BinaryFileResponse
+    {
+        $fileRecord = DB::table('pengajuan_uang_muka_files as f')
+            ->join('pengajuan_uang_muka as u', 'f.no_aju', '=', 'u.no_aju')
+            ->where('f.nama_file', $namaFile)
+            ->select('u.kode_area', 'u.kode_project', 'u.no_aju')
+            ->first();
+
+        if (! $fileRecord || ! RoleHelper::canAccessSpp($role, $userArea, $userProject, $fileRecord)) {
+            return null;
+        }
+
+        $path = storage_path(self::UM_STORAGE_PATH.'/'.$namaFile);
+
+        return file_exists($path) ? response()->download($path) : null;
     }
 
     private function isValidMime(UploadedFile $file, array $allowed): bool

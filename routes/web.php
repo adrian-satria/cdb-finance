@@ -13,6 +13,9 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\SppController;
+use App\Http\Controllers\AdvanceController;
+use App\Http\Controllers\LpjController;
+use App\Http\Controllers\ReimburseController;
 use Illuminate\Support\Facades\Route;
 
 // =========================================================================
@@ -55,6 +58,29 @@ Route::middleware(['auth', 'validate.session'])->group(function () {
     Route::get('/spp/preview-cetak', [SppController::class, 'previewPdf']);
     Route::get('/spp/cetak', [SppController::class, 'cetakPdf']);
     Route::get('/spp/file/{nama_file}', [SppController::class, 'downloadFile']);
+
+    // --- UANG MUKA (UM / LPJ / REIMBURSE) ---
+    // Static-prefix routes MUST be registered before the dynamic /uang-muka/{noAju}.
+    Route::get('/uang-muka', [AdvanceController::class, 'index']);
+    Route::get('/uang-muka/tambah', [AdvanceController::class, 'create']);
+    Route::post('/uang-muka/simpan', [AdvanceController::class, 'store'])->middleware('throttle:30,1');
+    Route::post('/uang-muka/validasi', [AdvanceController::class, 'validasi'])->middleware('throttle:30,1');
+    Route::post('/uang-muka/cairkan', [AdvanceController::class, 'cairkan'])->middleware('throttle:10,1');
+    Route::get('/uang-muka/file/{namaFile}', [AdvanceController::class, 'downloadFile']);
+
+    // --- LPJ UANG MUKA ---
+    Route::get('/uang-muka/lpj', [LpjController::class, 'index']);
+    Route::get('/uang-muka/lpj/tambah', [LpjController::class, 'create']);
+    Route::post('/uang-muka/lpj/simpan', [LpjController::class, 'store'])->middleware('throttle:30,1');
+    Route::post('/uang-muka/lpj/validasi', [LpjController::class, 'validasi'])->middleware('throttle:30,1');
+    Route::get('/uang-muka/lpj/{noLpj}', [LpjController::class, 'show']);
+
+    // --- REIMBURSE LPJ ---
+    Route::get('/uang-muka/reimburse', [ReimburseController::class, 'index']);
+    Route::post('/uang-muka/reimburse/validasi', [ReimburseController::class, 'validasi'])->middleware('throttle:30,1');
+    Route::get('/uang-muka/reimburse/{noReimburse}', [ReimburseController::class, 'show']);
+
+    Route::get('/uang-muka/{noAju}', [AdvanceController::class, 'show']);
 
     // --- NOTIFIKASI ---
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
