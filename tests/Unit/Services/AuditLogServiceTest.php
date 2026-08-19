@@ -202,7 +202,7 @@ class AuditLogServiceTest extends TestCase
     {
         AuditLogService::logLogout();
 
-        $entry = DB::table('audit_trails')->where('aksi', 'LOGOUT')->first();
+        $entry = DB::table('audit_trails')->where('aksi', 'LOGOUT')->latest('id')->first();
         $this->assertNotNull($entry);
         $this->assertStringContainsString('audit_admin', $entry->deskripsi);
     }
