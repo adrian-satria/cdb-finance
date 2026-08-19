@@ -103,6 +103,7 @@ class AdvanceTest extends TestCase
         $this->assertEquals('Cair', $um->status_um);
         $this->assertEquals('1000000.00', $um->sisa_lpj);
         $this->assertNotNull($um->tanggal_jatuh_tempo);
+        $this->assertNotNull($um->tanggal_cair);
     }
 
     /** @test */

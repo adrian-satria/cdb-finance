@@ -38,7 +38,7 @@ class AdvanceController extends Controller
         $userArea = session('kode_area');
         $userProject = session('kode_project');
 
-        $query = PengajuanUangMuka::query();
+        $query = PengajuanUangMuka::query()->with('pengaju');
 
         if (RoleHelper::isStaffArea($role)) {
             $query->where('kode_area', $userArea);
@@ -302,6 +302,7 @@ class AdvanceController extends Controller
                     'status_um' => 'Cair',
                     'posisi_saat_ini' => 'FINISH',
                     'tanggal_jatuh_tempo' => $deadline,
+                    'tanggal_cair' => now()->format('Y-m-d'),
                     'sisa_lpj' => $um->total_nominal,
                 ]);
 

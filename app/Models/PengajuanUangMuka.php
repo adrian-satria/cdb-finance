@@ -19,13 +19,14 @@ class PengajuanUangMuka extends Model
     protected $fillable = [
         'no_aju', 'tanggal', 'id_pengaju', 'kode_project', 'kode_area',
         'keterangan', 'total_nominal', 'sisa_lpj', 'status_um',
-        'posisi_saat_ini', 'tanggal_jatuh_tempo', 'keterangan_checker',
+        'posisi_saat_ini', 'tanggal_jatuh_tempo', 'tanggal_cair', 'keterangan_checker',
         'refund_jumlah', 'refund_tanggal', 'refund_bukti',
     ];
 
     protected $casts = [
         'tanggal' => 'date',
         'tanggal_jatuh_tempo' => 'date',
+        'tanggal_cair' => 'date',
         'total_nominal' => 'decimal:2',
         'sisa_lpj' => 'decimal:2',
         'refund_jumlah' => 'decimal:2',
@@ -70,5 +71,20 @@ class PengajuanUangMuka extends Model
             && $this->status_um === 'Cair'
             && $this->sisa_lpj > 0
             && $this->tanggal_jatuh_tempo->isPast();
+    }
+
+    /**
+     * Umur kas bon (hari): sejak dicairkan sampai settle (refund) atau hari ini.
+     * Null bila belum cair.
+     */
+    public function getUmurKasBonAttribute(): ?int
+    {
+        if (! $this->tanggal_cair) {
+            return null;
+        }
+
+        $selesai = $this->refund_tanggal ?? now();
+
+        return $this->tanggal_cair->diffInDays($selesai);
     }
 }

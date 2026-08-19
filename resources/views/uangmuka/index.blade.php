@@ -12,7 +12,7 @@
                     <h5 class="fw-bold text-dark m-0" style="font-size:20px;">Pengajuan Uang Muka (UM)</h5>
                 </div>
                 <div class="d-flex gap-2">
-                    <a href="/uang-muka?register=outstanding" class="btn-bsmart-secondary">
+                    <a href="/uang-muka" class="btn-bsmart-secondary">
                         <i class="fa-solid fa-clipboard-list me-1"></i> Register UM
                     </a>
                     <a href="/uang-muka/tambah" class="btn-bsmart-primary">
@@ -46,53 +46,44 @@
                     <table class="table align-middle table-bsmart">
                         <thead>
                             <tr>
-                                <th>No. AJU</th>
-                                <th>Tanggal</th>
-                                <th>Project</th>
-                                <th>Area</th>
-                                <th class="text-end">Total</th>
-                                <th class="text-end">Sisa LPJ</th>
-                                <th>Status</th>
+                                <th>No</th>
+                                <th>Tgl Pengajuan</th>
+                                <th>Nomor Uang Muka</th>
+                                <th>Nama</th>
+                                <th>Project/Bidang</th>
+                                <th>Detil</th>
+                                <th class="text-end">Jumlah</th>
+                                <th>Tanggal Dicairkan</th>
+                                <th>Tanggal Akan Diselesaikan</th>
+                                <th>Tanggal Kas Bon Selesai</th>
+                                <th>Umur Kas Bon</th>
                                 <th class="text-center">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($list as $um)
+                                @php
+                                    $nama = optional($um->pengaju)->nama_lengkap ?? optional($um->pengaju)->name ?? optional($um->pengaju)->username ?? '-';
+                                    $no = ($list->currentPage() - 1) * $list->perPage() + $loop->iteration;
+                                @endphp
                                 <tr>
+                                    <td class="text-muted">{{ $no }}</td>
+                                    <td>{{ $um->tanggal?->format('d/m/Y') ?? '-' }}</td>
                                     <td class="fw-semibold">{{ $um->no_aju }}</td>
-                                    <td>{{ $um->tanggal?->format('d/m/Y') }}</td>
-                                    <td>{{ $um->kode_project }}</td>
-                                    <td>{{ $um->kode_area }}</td>
+                                    <td>{{ $nama }}</td>
+                                    <td>{{ $um->kode_project }} / {{ $um->kode_area }}</td>
+                                    <td>{{ $um->keterangan ?? '-' }}</td>
                                     <td class="text-end">Rp {{ number_format($um->total_nominal, 0, ',', '.') }}</td>
-                                    <td class="text-end">
-                                        @if($um->sisa_lpj > 0)
-                                            <span class="text-danger">Rp {{ number_format($um->sisa_lpj, 0, ',', '.') }}</span>
-                                        @else
-                                            Rp 0
-                                        @endif
-                                    </td>
-                                    <td>
-                                        @php
-                                            $badge = match($um->status_um) {
-                                                'Pending' => 'bg-warning text-dark',
-                                                'Approved' => 'bg-success',
-                                                'Cair' => 'bg-primary',
-                                                'Revisi' => 'bg-secondary',
-                                                'Rejected' => 'bg-danger',
-                                                default => 'bg-light text-dark'
-                                            };
-                                        @endphp
-                                        <span class="badge {{ $badge }}">{{ $um->status_um }}</span>
-                                        @if($um->isOverdue())
-                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Jatuh Tempo</span>
-                                        @endif
-                                    </td>
+                                    <td>{{ $um->tanggal_cair?->format('d/m/Y') ?? '-' }}</td>
+                                    <td>{{ $um->tanggal_jatuh_tempo?->format('d/m/Y') ?? '-' }}</td>
+                                    <td>{{ $um->refund_tanggal?->format('d/m/Y') ?? '-' }}</td>
+                                    <td>{{ $um->umur_kas_bon !== null ? $um->umur_kas_bon.' hari' : '-' }}</td>
                                     <td class="text-center">
-                                        <a href="/uang-muka/{{ $um->no_aju }}" class="btn btn-sm btn-outline-primary rounded-circle"><i class="fa-solid fa-eye"></i></a>
+                                        <a href="/uang-muka/{{ $um->no_aju }}" class="btn btn-sm btn-outline-primary rounded-circle" title="Lihat"><i class="fa-solid fa-eye"></i></a>
                                     </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="8" class="text-center text-muted py-4">Belum ada pengajuan uang muka.</td></tr>
+                                <tr><td colspan="12" class="text-center text-muted py-4">Belum ada pengajuan uang muka.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
