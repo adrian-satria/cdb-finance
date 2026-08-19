@@ -82,7 +82,7 @@
                             <thead>
                                 <tr>
                                     <th width="5%" class="text-center">No</th>
-                                    <th width="45%">Keterangan</th>
+                                    <th width="45%">Uraian</th>
                                     <th width="25%">Kode Budget</th>
                                     <th width="20%">Jumlah (Rp)</th>
                                     <th width="5%" class="text-center">Aksi</th>

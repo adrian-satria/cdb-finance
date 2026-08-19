@@ -27,7 +27,7 @@
 
                 <div class="table-responsive mb-3">
                     <table class="table align-middle table-bsmart">
-                        <thead><tr><th>Keterangan</th><th>Kode Budget</th><th class="text-end">Realisasi</th></tr></thead>
+                        <thead><tr><th>Uraian</th><th>Kode Budget</th><th class="text-end">Realisasi</th></tr></thead>
                         <tbody>@foreach($lpj->details as $d)<tr><td>{{ $d->keterangan }}</td><td>{{ $d->kode_budget }}</td><td class="text-end">Rp {{ number_format($d->nominal,0,',','.') }}</td></tr>@endforeach</tbody>
                     </table>
                 </div>

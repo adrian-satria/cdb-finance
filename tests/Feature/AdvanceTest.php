@@ -153,4 +153,30 @@ class AdvanceTest extends TestCase
         $um = DB::table('pengajuan_uang_muka')->where('no_aju', $noAju)->first();
         $this->assertEquals('1000000.00', $um->sisa_lpj);
     }
+
+    /** @test */
+    public function um_print_preview_renders_register_form(): void
+    {
+        $noAju = $this->cairUm('1000000');
+
+        $resp = $this->actingAsUser('um.mk', 'MANAGER_KEUANGAN', '01', 'belu')
+            ->get('/uang-muka/preview-cetak?no_aju='.$noAju);
+
+        $resp->assertStatus(200);
+        $resp->assertSee('FORM PENGAJUAN UANG MUKA');
+        $resp->assertSee('Terbilang');
+        $resp->assertSee('Uraian');
+    }
+
+    /** @test */
+    public function um_print_pdf_streams_download(): void
+    {
+        $noAju = $this->cairUm('1000000');
+
+        $resp = $this->actingAsUser('um.mk', 'MANAGER_KEUANGAN', '01', 'belu')
+            ->get('/uang-muka/cetak?no_aju='.$noAju);
+
+        $resp->assertStatus(200);
+        $this->assertStringContainsString('application/pdf', $resp->headers->get('content-type'));
+    }
 }

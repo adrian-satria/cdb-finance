@@ -31,7 +31,7 @@
                     </div>
                     <div class="table-responsive mb-3">
                         <table class="table align-middle table-bsmart" id="detailTable">
-                            <thead><tr><th width="5%" class="text-center">No</th><th width="45%">Keterangan</th><th width="25%">Kode Budget</th><th width="20%">Realisasi (Rp)</th><th width="5%" class="text-center">Aksi</th></tr></thead>
+                            <thead><tr><th width="5%" class="text-center">No</th><th width="45%">Uraian</th><th width="25%">Kode Budget</th><th width="20%">Realisasi (Rp)</th><th width="5%" class="text-center">Aksi</th></tr></thead>
                             <tbody>
                                 <tr style="border-bottom:1px solid #f1f3f4;">
                                     <td class="text-center row-number fw-semibold text-secondary">1</td>

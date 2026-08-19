@@ -13,6 +13,8 @@ use App\Services\NotificationService;
 use App\Services\SequenceNumberService;
 use App\Services\WorkflowService;
 use App\Support\RoleHelper;
+use App\Support\Terbilang;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -333,6 +335,55 @@ class AdvanceController extends Controller
         }
 
         return $file;
+    }
+
+    public function cetakPdf(Request $request)
+    {
+        $um = $this->resolveUmForPrint($request->query('no_aju'));
+
+        $pdf = Pdf::loadView('uangmuka.cetak_pdf', $this->umPrintData($um))
+            ->setPaper('a4', 'portrait');
+
+        return $pdf->stream('UM_'.str_replace('/', '-', $um->no_aju).'.pdf');
+    }
+
+    public function previewPdf(Request $request)
+    {
+        $um = $this->resolveUmForPrint($request->query('no_aju'));
+
+        return view('uangmuka.cetak_pdf', $this->umPrintData($um));
+    }
+
+    private function resolveUmForPrint(?string $noAju): PengajuanUangMuka
+    {
+        $um = PengajuanUangMuka::with(['pengaju', 'project', 'details'])
+            ->where('no_aju', $noAju)->first();
+
+        if (! $um) {
+            abort(404, 'Data pengajuan uang muka tidak ditemukan!');
+        }
+
+        if (! RoleHelper::canAccessSpp(session('role'), session('kode_area'), session('kode_project'), $um)) {
+            abort(403, 'AKSI ILEGAL: Anda dilarang mencetak dokumen dari unit area kerja lain!');
+        }
+
+        AuditLogService::log('CETAK_PDF_UM', "User mencetak PDF UM {$um->no_aju}", $um);
+
+        return $um;
+    }
+
+    private function umPrintData(PengajuanUangMuka $um): array
+    {
+        $nama = optional($um->pengaju)->nama_lengkap ?? optional($um->pengaju)->name ?? '-';
+        $projectName = optional($um->project)->nama_project ?? $um->kode_project;
+
+        return [
+            'um' => $um,
+            'nama' => $nama,
+            'projectName' => $projectName,
+            'ttd' => ['pemohon' => $nama],
+            'terbilang' => Terbilang::rp($um->total_nominal),
+        ];
     }
 
     public function setorBalik(Request $request)

@@ -6,9 +6,14 @@
 <div class="row">
     <div class="col-lg-8">
         <div class="card card-bsmart">
-            <div class="card-header bg-transparent border-0 pt-4 px-4 d-flex align-items-center gap-3">
-                <i class="fa-solid fa-money-bill-wave fs-4 text-primary"></i>
-                <h5 class="fw-bold text-dark m-0" style="font-size:20px;">Detail Uang Muka {{ $um->no_aju }}</h5>
+            <div class="card-header bg-transparent border-0 pt-4 px-4 d-flex align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <i class="fa-solid fa-money-bill-wave fs-4 text-primary"></i>
+                    <h5 class="fw-bold text-dark m-0" style="font-size:20px;">Detail Uang Muka {{ $um->no_aju }}</h5>
+                </div>
+                <a href="/uang-muka/cetak?no_aju={{ $um->no_aju }}" class="btn-bsmart-secondary" target="_blank">
+                    <i class="fa-solid fa-print me-1"></i> Cetak PDF
+                </a>
             </div>
             <div class="card-body p-4">
                 @if(session('success'))
@@ -51,7 +56,7 @@
 
                 <div class="table-responsive mb-3">
                     <table class="table align-middle table-bsmart">
-                        <thead><tr><th>Keterangan</th><th>Kode Budget</th><th class="text-end">Jumlah</th></tr></thead>
+                        <thead><tr><th>Uraian</th><th>Kode Budget</th><th class="text-end">Jumlah</th></tr></thead>
                         <tbody>
                             @foreach($um->details as $d)
                                 <tr><td>{{ $d->keterangan }}</td><td>{{ $d->kode_budget }}</td><td class="text-end">Rp {{ number_format($d->nominal, 0, ',', '.') }}</td></tr>
