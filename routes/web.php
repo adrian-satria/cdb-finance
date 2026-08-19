@@ -76,6 +76,8 @@ Route::middleware(['auth', 'validate.session'])->group(function () {
     Route::get('/uang-muka/lpj/tambah', [LpjController::class, 'create']);
     Route::post('/uang-muka/lpj/simpan', [LpjController::class, 'store'])->middleware('throttle:30,1');
     Route::post('/uang-muka/lpj/validasi', [LpjController::class, 'validasi'])->middleware('throttle:30,1');
+    Route::get('/uang-muka/lpj/cetak', [LpjController::class, 'cetakPdf'])->middleware('throttle:10,1');
+    Route::get('/uang-muka/lpj/preview-cetak', [LpjController::class, 'previewPdf']);
     Route::get('/uang-muka/lpj/{noLpj}', [LpjController::class, 'show']);
 
     // --- REIMBURSE LPJ ---

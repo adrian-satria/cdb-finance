@@ -11,9 +11,9 @@ class LpjUangMukaDetail extends Model
 
     public $timestamps = false;
 
-    protected $fillable = ['no_lpj', 'keterangan', 'kode_budget', 'nominal'];
+    protected $fillable = ['no_lpj', 'keterangan', 'kode_budget', 'tanggal', 'nominal', 'no_bukti'];
 
-    protected $casts = ['nominal' => 'decimal:2'];
+    protected $casts = ['tanggal' => 'date', 'nominal' => 'decimal:2'];
 
     public function lpj(): BelongsTo
     {

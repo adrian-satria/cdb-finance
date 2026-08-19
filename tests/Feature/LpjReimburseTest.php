@@ -118,4 +118,42 @@ class LpjReimburseTest extends TestCase
         // UM lunas (sisa 0)
         $this->assertEquals('0.00', DB::table('pengajuan_uang_muka')->where('no_aju', $noAju)->value('sisa_lpj'));
     }
+
+    private function createLpj(): string
+    {
+        $noAju = $this->cairUm('1000000');
+
+        $this->actingAsUser('lpj.maker', 'MAKER', '01', 'belu')->post('/uang-muka/lpj/simpan', [
+            'no_aju' => $noAju, 'tanggal' => '2026-08-19',
+            'items' => [['kode_budget' => 'B-001', 'jumlah' => 600000, 'keterangan' => 'real', 'tanggal' => '2026-08-19', 'no_bukti' => 'hal.2']],
+        ]);
+
+        return DB::table('lpj_uang_muka')->orderByDesc('created_at')->value('no_lpj');
+    }
+
+    /** @test */
+    public function lpj_print_preview_renders_form(): void
+    {
+        $noLpj = $this->createLpj();
+
+        $resp = $this->actingAsUser('lpj.mk', 'MANAGER_KEUANGAN', '01', 'belu')
+            ->get('/uang-muka/lpj/preview-cetak?no_lpj='.$noLpj);
+
+        $resp->assertStatus(200);
+        $resp->assertSee('LAPORAN PERTANGGUNGJAWABAN UANG MUKA');
+        $resp->assertSee('Jumlah Pengeluaran');
+        $resp->assertSee('NO BUKTI');
+    }
+
+    /** @test */
+    public function lpj_print_pdf_streams(): void
+    {
+        $noLpj = $this->createLpj();
+
+        $resp = $this->actingAsUser('lpj.mk', 'MANAGER_KEUANGAN', '01', 'belu')
+            ->get('/uang-muka/lpj/cetak?no_lpj='.$noLpj);
+
+        $resp->assertStatus(200);
+        $this->assertStringContainsString('application/pdf', $resp->headers->get('content-type'));
+    }
 }

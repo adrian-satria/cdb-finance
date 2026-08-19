@@ -12,6 +12,8 @@ use App\Services\NotificationService;
 use App\Services\SequenceNumberService;
 use App\Services\WorkflowService;
 use App\Support\RoleHelper;
+use App\Support\Terbilang;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -74,6 +76,8 @@ class LpjController extends Controller
             'items.*.kode_budget' => 'required|string',
             'items.*.jumlah' => 'required|numeric|min:0',
             'items.*.keterangan' => 'nullable|string|max:255',
+            'items.*.tanggal' => 'nullable|date',
+            'items.*.no_bukti' => 'nullable|string|max:100',
         ]);
 
         $um = PengajuanUangMuka::where('no_aju', $validated['no_aju'])->firstOrFail();
@@ -113,7 +117,9 @@ class LpjController extends Controller
                         'no_lpj' => $noLpj,
                         'keterangan' => $item['keterangan'] ?? '-',
                         'kode_budget' => $item['kode_budget'],
+                        'tanggal' => $item['tanggal'] ?? null,
                         'nominal' => $item['jumlah'],
+                        'no_bukti' => $item['no_bukti'] ?? null,
                     ]);
                 }
             });
@@ -148,6 +154,65 @@ class LpjController extends Controller
             && in_array($lpj->status_lpj, ['Pending', 'Approved', 'Revisi'], true);
 
         return view('uangmuka.lpj_show', compact('lpj', 'canAct'));
+    }
+
+    public function cetakPdf(Request $request)
+    {
+        $lpj = $this->resolveLpjForPrint($request->query('no_lpj'));
+
+        $pdf = Pdf::loadView('uangmuka.lpj_cetak_pdf', $this->lpjPrintData($lpj))
+            ->setPaper('a4', 'portrait');
+
+        return $pdf->stream('LPJ_'.str_replace('/', '-', $lpj->no_lpj).'.pdf');
+    }
+
+    public function previewPdf(Request $request)
+    {
+        $lpj = $this->resolveLpjForPrint($request->query('no_lpj'));
+
+        return view('uangmuka.lpj_cetak_pdf', $this->lpjPrintData($lpj));
+    }
+
+    private function resolveLpjForPrint(?string $noLpj): LpjUangMuka
+    {
+        $lpj = LpjUangMuka::with(['pengajuan', 'pengajuan.project', 'pelaksana', 'details'])
+            ->where('no_lpj', $noLpj)->first();
+
+        if (! $lpj) {
+            abort(404, 'Data LPJ tidak ditemukan!');
+        }
+
+        if (! RoleHelper::canAccessSpp(session('role'), session('kode_area'), session('kode_project'), $lpj->pengajuan)) {
+            abort(403, 'AKSI ILEGAL: Anda dilarang mencetak dokumen dari unit area kerja lain!');
+        }
+
+        AuditLogService::log('CETAK_PDF_LPJ', "User mencetak PDF LPJ {$lpj->no_lpj}", $lpj);
+
+        return $lpj;
+    }
+
+    private function lpjPrintData(LpjUangMuka $lpj): array
+    {
+        $um = $lpj->pengajuan;
+        $pelaksana = optional($lpj->pelaksana)->nama_lengkap ?? optional($lpj->pelaksana)->name ?? '-';
+        $projectName = optional($um->project)->nama_project ?? $lpj->pengajuan->kode_project;
+        $kodeAktivitas = optional($lpj->details->first())->kode_budget ?? '-';
+        $a = $lpj->total_realisasi;
+        $b = $um->total_nominal;
+        $saldo = bcsub((string) $b, (string) $a, 2);
+
+        return [
+            'lpj' => $lpj,
+            'um' => $um,
+            'penanggungjawab' => $pelaksana,
+            'projectName' => $projectName,
+            'kegiatan' => $um->keterangan ?? '-',
+            'kodeAktivitas' => $kodeAktivitas,
+            'a' => $a,
+            'b' => $b,
+            'saldo' => $saldo,
+            'terbilang' => Terbilang::rp($a),
+        ];
     }
 
     public function validasi(Request $request)

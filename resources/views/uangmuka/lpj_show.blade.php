@@ -4,9 +4,14 @@
 <div class="row">
     <div class="col-lg-8">
         <div class="card card-bsmart">
-            <div class="card-header bg-transparent border-0 pt-4 px-4 d-flex align-items-center gap-3">
-                <i class="fa-solid fa-clipboard-check fs-4 text-primary"></i>
-                <h5 class="fw-bold text-dark m-0" style="font-size:20px;">LPJ {{ $lpj->no_lpj }}</h5>
+            <div class="card-header bg-transparent border-0 pt-4 px-4 d-flex align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <i class="fa-solid fa-clipboard-check fs-4 text-primary"></i>
+                    <h5 class="fw-bold text-dark m-0" style="font-size:20px;">LPJ {{ $lpj->no_lpj }}</h5>
+                </div>
+                <a href="/uang-muka/lpj/cetak?no_lpj={{ $lpj->no_lpj }}" class="btn-bsmart-secondary" target="_blank">
+                    <i class="fa-solid fa-print me-1"></i> Cetak PDF
+                </a>
             </div>
             <div class="card-body p-4">
                 @if(session('success'))<div class="alert alert-success alert-dismissible fade show"><i class="fa-solid fa-circle-check me-1"></i>{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
