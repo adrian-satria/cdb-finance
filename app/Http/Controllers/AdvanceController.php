@@ -333,4 +333,69 @@ class AdvanceController extends Controller
 
         return $file;
     }
+
+    public function setorBalik(Request $request)
+    {
+        $request->validate([
+            'no_aju' => 'required|string',
+            'nominal' => 'required|numeric|min:1',
+            'refund_tanggal' => 'required|date',
+            'file_lampiran' => 'nullable|array',
+        ]);
+
+        $currentRole = session('role');
+        $refundRoles = config('um_workflow.refund_roles', ['MANAGER_KEUANGAN', 'KASIR_PUSAT']);
+
+        if (! in_array($currentRole, $refundRoles, true)) {
+            abort(403, 'Hanya keuangan (MANAGER_KEUANGAN / KASIR_PUSAT) yang dapat mencatat setor balik.');
+        }
+
+        try {
+            return DB::transaction(function () use ($request, $currentRole) {
+                $um = PengajuanUangMuka::where('no_aju', $request->no_aju)->lockForUpdate()->first();
+
+                if (! $um) {
+                    throw new \Exception('Data pengajuan uang muka tidak ditemukan!');
+                }
+
+                if (! RoleHelper::canAccessSpp($currentRole, session('kode_area'), session('kode_project'), $um)) {
+                    throw new \Exception('AKSES DITOLAK: UM berada di luar kewenangan Anda.');
+                }
+
+                if ($um->status_um !== 'Cair' || $um->sisa_lpj <= 0) {
+                    throw new \Exception('UM tidak dalam status Cair atau sudah lunas LPJ.');
+                }
+
+                $nominal = (string) $request->nominal;
+                if (bccomp($nominal, (string) $um->sisa_lpj, 2) === 1) {
+                    throw new \Exception('Nominal setor balik melebihi sisa piutang (Rp '.number_format($um->sisa_lpj, 0, ',', '.').').');
+                }
+
+                $bukti = null;
+                if ($request->hasFile('file_lampiran')) {
+                    $records = $this->fileService->uploadUangMukaAttachments($request->file('file_lampiran'), $um->no_aju, 'REFUND');
+                    $bukti = $records[0]['nama_file'] ?? null;
+                }
+
+                $sisaBaru = bcsub((string) $um->sisa_lpj, $nominal, 2);
+
+                $um->update([
+                    'sisa_lpj' => $sisaBaru,
+                    'refund_jumlah' => bcadd((string) ($um->refund_jumlah ?? 0), $nominal, 2),
+                    'refund_tanggal' => $request->refund_tanggal,
+                    'refund_bukti' => $um->refund_bukti ?? $bukti,
+                ]);
+
+                $msg = bccomp($sisaBaru, '0', 2) === 0
+                    ? "Setor balik Rp ".number_format($nominal, 0, ',', '.').' berhasil. UM lunas.'
+                    : "Setor balik Rp ".number_format($nominal, 0, ',', '.').' berhasil. Sisa piutang Rp '.number_format($sisaBaru, 0, ',', '.').'.';
+
+                return redirect('/uang-muka/'.$um->no_aju)->with('success', $msg);
+            });
+        } catch (\Exception $e) {
+            Log::error('UM setor balik failed', ['error' => $e->getMessage()]);
+
+            return redirect()->back()->with('error', $e->getMessage() ?: 'Gagal mencatat setor balik.');
+        }
+    }
 }

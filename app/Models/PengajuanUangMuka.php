@@ -20,6 +20,7 @@ class PengajuanUangMuka extends Model
         'no_aju', 'tanggal', 'id_pengaju', 'kode_project', 'kode_area',
         'keterangan', 'total_nominal', 'sisa_lpj', 'status_um',
         'posisi_saat_ini', 'tanggal_jatuh_tempo', 'keterangan_checker',
+        'refund_jumlah', 'refund_tanggal', 'refund_bukti',
     ];
 
     protected $casts = [
@@ -27,6 +28,8 @@ class PengajuanUangMuka extends Model
         'tanggal_jatuh_tempo' => 'date',
         'total_nominal' => 'decimal:2',
         'sisa_lpj' => 'decimal:2',
+        'refund_jumlah' => 'decimal:2',
+        'refund_tanggal' => 'date',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

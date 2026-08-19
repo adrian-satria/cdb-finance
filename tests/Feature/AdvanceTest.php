@@ -21,6 +21,8 @@ class AdvanceTest extends TestCase
         $this->seedUser('um.koord', 'KOORDINATOR_KEUANGAN', '01', 'belu');
         $this->seedUser('um.mk', 'MANAGER_KEUANGAN', '01', 'belu');
         $this->seedUser('um.kasir', 'KASIR_PUSAT', 'all', 'all');
+        $this->seedUser('lpj.mk', 'MANAGER_KEUANGAN', '01', 'belu');
+        $this->seedUser('lpj.koord', 'KOORDINATOR_KEUANGAN', '01', 'belu');
     }
 
     private function seedUser(string $username, string $role, string $project, string $area): int
@@ -60,6 +62,16 @@ class AdvanceTest extends TestCase
         $um = DB::table('pengajuan_uang_muka')->orderByDesc('created_at')->first();
 
         return $um->no_aju;
+    }
+
+    private function cairUm(string $total): string
+    {
+        $noAju = $this->storeUm('um.maker');
+        $this->actingAsUser('um.koord', 'KOORDINATOR_KEUANGAN', '01', 'belu')->post('/uang-muka/validasi', ['no_aju' => $noAju, 'aksi' => 'approve']);
+        $this->actingAsUser('um.mk', 'MANAGER_KEUANGAN', '01', 'belu')->post('/uang-muka/validasi', ['no_aju' => $noAju, 'aksi' => 'approve']);
+        $this->actingAsUser('um.kasir', 'KASIR_PUSAT', 'all', 'all')->post('/uang-muka/cairkan', ['no_aju' => $noAju]);
+
+        return $noAju;
     }
 
     /** @test */
@@ -105,5 +117,39 @@ class AdvanceTest extends TestCase
 
         $resp->assertSessionHas('error');
         $this->assertEquals('KOORDINATOR_KEUANGAN', DB::table('pengajuan_uang_muka')->where('no_aju', $noAju)->value('posisi_saat_ini'));
+    }
+
+    /** @test */
+    public function finance_can_record_refund_and_clears_piutang(): void
+    {
+        $noAju = $this->cairUm('1000000');
+        $file = \Illuminate\Http\UploadedFile::fake()->image('bukti.png');
+
+        $this->actingAsUser('lpj.mk', 'MANAGER_KEUANGAN', '01', 'belu')
+            ->post('/uang-muka/refund', [
+                'no_aju' => $noAju,
+                'nominal' => 1000000,
+                'refund_tanggal' => '2026-08-20',
+                'file_lampiran' => [$file],
+            ]);
+
+        $um = DB::table('pengajuan_uang_muka')->where('no_aju', $noAju)->first();
+        $this->assertEquals('0.00', $um->sisa_lpj);
+        $this->assertEquals('1000000.00', $um->refund_jumlah);
+        $this->assertNotNull($um->refund_bukti);
+        $this->assertEquals(1, DB::table('pengajuan_uang_muka_files')->where('no_aju', $noAju)->where('kategori', 'REFUND')->count());
+    }
+
+    /** @test */
+    public function non_finance_cannot_record_refund(): void
+    {
+        $noAju = $this->cairUm('1000000');
+
+        $resp = $this->actingAsUser('lpj.koord', 'KOORDINATOR_KEUANGAN', '01', 'belu')
+            ->post('/uang-muka/refund', ['no_aju' => $noAju, 'nominal' => 1000000, 'refund_tanggal' => '2026-08-20']);
+
+        $resp->assertStatus(403);
+        $um = DB::table('pengajuan_uang_muka')->where('no_aju', $noAju)->first();
+        $this->assertEquals('1000000.00', $um->sisa_lpj);
     }
 }

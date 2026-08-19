@@ -14,4 +14,5 @@ return [
     'default_initial_position' => 'MANAGER_KEUANGAN',
     'lpj_deadline_days' => 14,
     'status_cair' => 'Cair',
+    'refund_roles' => ['MANAGER_KEUANGAN', 'KASIR_PUSAT'],
 ];

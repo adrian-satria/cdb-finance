@@ -38,6 +38,17 @@
                     <a href="/uang-muka/lpj/tambah?no_aju={{ $um->no_aju }}" class="btn-bsmart-primary mb-3"><i class="fa-solid fa-clipboard-check me-1"></i> Buat LPJ</a>
                 @endif
 
+                @if($um->refund_jumlah > 0)
+                    <div class="alert alert-success d-flex align-items-center gap-2 mb-3">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <div>
+                            <strong>Setor balik tercatat:</strong> Rp {{ number_format($um->refund_jumlah, 0, ',', '.') }}
+                            @if($um->refund_tanggal) ({{ $um->refund_tanggal->format('d/m/Y') }})@endif
+                            @if($um->refund_bukti) — <a href="/uang-muka/file/{{ $um->refund_bukti }}" target="_blank">lihat bukti</a>@endif
+                        </div>
+                    </div>
+                @endif
+
                 <div class="table-responsive mb-3">
                     <table class="table align-middle table-bsmart">
                         <thead><tr><th>Keterangan</th><th>Kode Budget</th><th class="text-end">Jumlah</th></tr></thead>
@@ -88,6 +99,36 @@
                         <input type="text" name="alasan" class="form-control-custom" placeholder="Alasan (jika revisi/tolak)">
                     </div>
                     <button type="submit" class="btn-bsmart-primary w-100"><i class="fa-solid fa-check me-1"></i> Proses</button>
+                </form>
+            </div>
+        </div>
+        @endif
+
+        @php $refundRoles = config('um_workflow.refund_roles', ['MANAGER_KEUANGAN', 'KASIR_PUSAT']); @endphp
+        @if($um->status_um === 'Cair' && $um->sisa_lpj > 0 && in_array(session('role'), $refundRoles))
+        <div class="card card-bsmart mt-3">
+            <div class="card-header bg-transparent border-0 pt-4 px-4"><h6 class="fw-bold m-0">Setor Balik (Refund)</h6></div>
+            <div class="card-body p-4">
+                <form action="/uang-muka/refund" method="POST" enctype="multipart/form-data">
+                    @csrf
+                    <input type="hidden" name="no_aju" value="{{ $um->no_aju }}">
+                    <div class="mb-2">
+                        <label class="form-label-custom">Nominal Setor</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-transparent border-end-0 px-2" style="font-size:12px;color:#6b7280;">Rp</span>
+                            <input type="number" name="nominal" class="form-control form-control-custom" value="{{ $um->sisa_lpj }}" max="{{ $um->sisa_lpj }}" required>
+                        </div>
+                        <small class="text-muted">Sisa piutang: Rp {{ number_format($um->sisa_lpj, 0, ',', '.') }}</small>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label-custom">Tanggal Setor</label>
+                        <input type="date" name="refund_tanggal" class="form-control-custom" value="{{ date('Y-m-d') }}" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label-custom">Bukti Transfer</label>
+                        <input type="file" name="file_lampiran[]" class="form-control-custom" multiple>
+                    </div>
+                    <button type="submit" class="btn-bsmart-primary w-100"><i class="fa-solid fa-money-bill-transfer me-1"></i> Catat Setor Balik</button>
                 </form>
             </div>
         </div>

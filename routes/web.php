@@ -66,6 +66,7 @@ Route::middleware(['auth', 'validate.session'])->group(function () {
     Route::post('/uang-muka/simpan', [AdvanceController::class, 'store'])->middleware('throttle:30,1');
     Route::post('/uang-muka/validasi', [AdvanceController::class, 'validasi'])->middleware('throttle:30,1');
     Route::post('/uang-muka/cairkan', [AdvanceController::class, 'cairkan'])->middleware('throttle:10,1');
+    Route::post('/uang-muka/refund', [AdvanceController::class, 'setorBalik'])->middleware('throttle:10,1');
     Route::get('/uang-muka/file/{namaFile}', [AdvanceController::class, 'downloadFile']);
 
     // --- LPJ UANG MUKA ---
