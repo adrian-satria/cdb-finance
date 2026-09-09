@@ -105,73 +105,98 @@ Run the test suite with:
 
 ```bash
 php artisan test
-Local Installation
-Requirements
-PHP 8.2+
-Composer
-MySQL
-Node.js & npm
-Git
-Setup
+```
+
+## Local Installation
+
+### Requirements
+
+- PHP 8.2+
+- Composer
+- MySQL
+- Node.js & npm
+- Git
+
+### Setup
 
 Clone the repository:
 
+```bash
 git clone https://github.com/adrian-satria/cdb-finance.git
 cd cdb-finance
+```
 
 Install PHP dependencies:
 
+```bash
 composer install
+```
 
 Install frontend dependencies:
 
+```bash
 npm install
+```
 
 Create the environment file:
 
+```bash
 cp .env.example .env
+```
 
 Generate the application key:
 
+```bash
 php artisan key:generate
+```
 
-Configure the database in .env, then run:
+Configure the database in `.env`, then run:
 
+```bash
 php artisan migrate --seed
+```
 
 Build frontend assets:
 
+```bash
 npm run build
+```
 
 Start the development server:
 
+```bash
 php artisan serve
-Demo Data
+```
+
+## Demo Data
 
 The repository includes sanitized demonstration data for portfolio purposes.
 
 No production database, credentials, personal information, or confidential organizational data are included in this repository.
 
-AI-Assisted Development
+
+
+## AI-Assisted Development
 
 AI-assisted software development tools were used during development to accelerate implementation, debugging, refactoring, testing, and documentation.
 
 The application itself should not be considered an AI-powered financial system. AI was used as a development assistance tool.
 
-Portfolio Note
+## Portfolio Note
 
 This project demonstrates practical experience in:
 
-IT application development
-Business process digitization
-Financial workflow automation
-Database-driven application development
-Role-based access control
-System validation
-IT operations and maintenance
-Troubleshooting and problem solving
-Author
+- IT application development
+- Business process digitization
+- Financial workflow automation
+- Database-driven application development
+- Role-based access control
+- System validation
+- IT operations and maintenance
+- Troubleshooting and problem solvingAuthor
 
-Adrian Satria Putra
+## Author
+
+**Adrian Satria Putra**
 
 IT Support & Application Development
