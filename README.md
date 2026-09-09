@@ -193,7 +193,7 @@ This project demonstrates practical experience in:
 - Role-based access control
 - System validation
 - IT operations and maintenance
-- Troubleshooting and problem solvingAuthor
+- Troubleshooting and problem solving
 
 ## Author
 
