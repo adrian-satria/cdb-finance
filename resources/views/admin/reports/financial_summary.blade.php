@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Ringkasan Keuangan | B-SMART')
+@section('title', 'Ringkasan Keuangan | Finance Management Demo')
 @section('content')
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -130,3 +130,4 @@
     </div>
 </div>
 @endsection
+

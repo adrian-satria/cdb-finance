@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Uang Muka | CDB Finance - B-SMART')
+@section('title', 'Uang Muka | Finance Management Demo')
 
 @section('content')
 <div class="row">
@@ -97,3 +97,4 @@
     </div>
 </div>
 @endsection
+

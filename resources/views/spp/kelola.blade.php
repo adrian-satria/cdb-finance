@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Kelola Surat | B-SMART')
+@section('title', 'Kelola Surat | Finance Management Demo')
 
 @section('content')
 <div class="container-fluid py-4">
@@ -207,6 +207,7 @@
     // Functions provided by resources/js/modules/spp.js (exposed on window)
 </script>
 @endpush
+
 
 
 

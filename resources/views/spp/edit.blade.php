@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Perbaiki SPP Revisi | CDB Finance - B-SMART')
+@section('title', 'Perbaiki SPP Revisi | Finance Management Demo')
 
 @section('content')
 <div class="row">
@@ -187,3 +187,4 @@
     }
 </script>
 @endsection
+

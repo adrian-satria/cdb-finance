@@ -25,7 +25,7 @@
 </head>
 <body>
     <div class="title">LAPORAN PERTANGGUNGJAWABAN UANG MUKA [LPJUM]</div>
-    <div class="subtitle">UPKM/CD BETHESDA YAKKUM</div>
+    <div class="subtitle">Finance Management Demo</div>
 
     <table class="form">
         <tr>
@@ -106,3 +106,4 @@
     </table>
 </body>
 </html>
+

@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Budget per Area | CDB Finance')
+@section('title', 'Budget per Area | Finance Management Demo')
 
 @section('content')
 <div class="container-fluid py-4">
@@ -157,3 +157,4 @@ document.getElementById('areaForm')?.addEventListener('submit', function() {
 });
 </script>
 @endpush
+

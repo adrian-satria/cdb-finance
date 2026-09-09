@@ -6,7 +6,7 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [env('APP_URL', 'https://domainkamu.com')],
+    'allowed_origins' => [env('APP_URL', 'http://localhost')],
 
     'allowed_origins_patterns' => [],
 

@@ -8,7 +8,7 @@ return new class extends Migration
     public function up(): void
     {
         $defaults = [
-            ['key' => 'app_name', 'value' => 'B-SMART', 'group' => 'general', 'label' => 'Nama Aplikasi', 'type' => 'text'],
+            ['key' => 'app_name', 'value' => 'Finance Management Demo', 'group' => 'general', 'label' => 'Nama Aplikasi', 'type' => 'text'],
             ['key' => 'max_file_size', 'value' => '5120', 'group' => 'general', 'label' => 'Max Ukuran File (KB)', 'type' => 'number'],
             ['key' => 'session_timeout', 'value' => '120', 'group' => 'security', 'label' => 'Session Timeout (menit)', 'type' => 'number'],
             ['key' => 'password_min_length', 'value' => '8', 'group' => 'security', 'label' => 'Min Panjang Password', 'type' => 'number'],

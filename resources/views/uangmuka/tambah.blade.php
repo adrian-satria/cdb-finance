@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Input UM | CDB Finance - B-SMART')
+@section('title', 'Input UM | Finance Management Demo')
 
 @section('content')
 <style>
@@ -159,3 +159,4 @@ document.querySelector('form')?.addEventListener('submit', function() {
 });
 </script>
 @endsection
+

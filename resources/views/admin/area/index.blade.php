@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Master Area | CDB Finance')
+@section('title', 'Master Area | Finance Management Demo')
 
 @section('content')
 <div class="container-fluid py-4">
@@ -80,3 +80,4 @@
     </div>
 </div>
 @endsection
+

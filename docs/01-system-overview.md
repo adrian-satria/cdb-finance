@@ -2,92 +2,98 @@
 
 ## 1.1 Deskripsi
 
-**CDB Finance (B-SMART)** adalah sistem informasi manajemen pengajuan dana / Surat Permintaan Pembayaran (SPP) untuk UPKM/CD Bethesda YAKKUM. Sistem ini mengelola workflow pengajuan dana dari staf hingga pencairan oleh kasir, dengan kontrol otorisasi berbasis role dan pagu anggaran.
+**Finance Management Demo** adalah aplikasi manajemen pengajuan dana dan pembayaran yang dikembangkan sebagai portfolio project berbasis Laravel.
+
+Aplikasi ini mensimulasikan workflow pengajuan dana mulai dari pembuatan pengajuan, proses approval bertahap, validasi pagu anggaran, pencairan, hingga pertanggungjawaban dan pelaporan.
+
+Sistem menggunakan role-based access control, project/area scoping, audit trail, dan validasi anggaran untuk membantu menjaga proses keuangan tetap terkontrol dan terdokumentasi.
 
 ## 1.2 Fitur Utama
 
 | Fitur | Deskripsi |
 |-------|-----------|
-| Manajemen SPP | Buat, edit, validasi, revisi, tolak, cairkan pengajuan dana |
-| Workflow Approval | State machine multi-tahap dengan 3 tipe alur berbeda |
-| Budget Ceiling | Validasi pagu anggaran otomatis, lock pessimistic |
-| Role-Based Access | 17 role dengan akses berbeda per fitur dan data |
-| Multi-Role User | Satu user bisa memiliki banyak peran, bisa switch |
-| Audit Trail | Semua perubahan tercatat: siapa, kapan, data sebelum/sesudah |
-| Notifikasi | Notifikasi in-app untuk setiap event workflow |
-| File Upload | Lampiran PDF/gambar untuk dokumen pendukung |
-| PDF Generation | Cetak SPP resmi dengan tanda tangan digital |
-| Dashboard | Statistik, grafik tren bulanan, task list per role |
+| Manajemen Pengajuan Dana | Buat, edit, validasi, revisi, tolak, dan proses pencairan pengajuan |
+| Workflow Approval | State machine multi-tahap dengan beberapa tipe alur approval |
+| Budget Ceiling | Validasi pagu anggaran otomatis dengan pessimistic locking |
+| Role-Based Access | Akses pengguna dibatasi berdasarkan role dan scope |
+| Multi-Role User | Satu user dapat memiliki beberapa kombinasi role dan scope |
+| Audit Trail | Perubahan penting tercatat beserta pelaku dan waktu kejadian |
+| Notifikasi | Notifikasi in-app untuk event tertentu dalam workflow |
+| File Upload | Lampiran dokumen pendukung dalam format PDF/gambar |
+| PDF Generation | Generate dokumen pengajuan dan pertanggungjawaban dalam format PDF |
+| Dashboard | Statistik, grafik, dan task list berdasarkan akses pengguna |
 
 ## 1.3 Tech Stack
 
 | Layer | Teknologi |
 |-------|-----------|
 | Backend | PHP 8.2+, Laravel 11.x |
-| Frontend | Blade, Bootstrap 5, Vite, vanilla JS (modular) |
-| Database | MySQL (via PDO) |
+| Frontend | Blade, Bootstrap 5, Vite, Vanilla JavaScript |
+| Database | MySQL |
 | PDF | barryvdh/laravel-dompdf |
-| Session | Database driver (File di production) |
+| Authentication | Laravel session-based authentication |
+| Session | File / Database driver |
 | Cache | Database / File |
 | Queue | Database |
 
-## 1.4 Role Matrix
+## 1.4 Role & Access Model
 
-| Role | Tipe | Scope |
-|------|------|-------|
-| ADMIN | Global | Seluruh sistem |
-| DIREKTUR | Global | Otorisasi >50jt |
-| KASIR_PUSAT | Global | Pencairan dana |
-| MAKER | Staff Area | Buat SPP (scoped by area) |
-| AREA_MANAGER | Staff Area | Approve SPP area |
-| FINANCE_PROJECT | Project | Approve finance |
-| PROJECT_MANAGER | Project | Approve project |
-| MANAGER_KEUANGAN | Project | Final review sebelum direktur |
-| MANAGER_PKP | Project | Approve khusus alur PKP |
-| KOORDINATOR_KEUANGAN | Project | Approve awal alus PO |
-| KOORDINATOR_PK | Project | Approve awal alur PK |
-| KOORDINATOR_TC | Project | Approve awal alur TC |
-| KOORDINATOR_DIKLAT | Project | Approve awal alur DIKLAT |
-| KOORDINATOR_KLINIK | Project | Approve awal alur KLINIK |
-| KOORDINATOR_BATRA | Project | Approve awal alur BATRA |
-| KOORDINATOR_BIDANG | Project | Approve awal alur BIDANG |
+Aplikasi menerapkan role-based access control dengan scope yang dapat dibatasi berdasarkan area maupun project.
+
+| Role | Scope | Tanggung Jawab |
+|------|-------|----------------|
+| ADMIN | Global | Administrasi dan konfigurasi sistem |
+| FINANCE_MANAGER | Global | Review dan approval keuangan |
+| CASHIER | Global | Proses pencairan dana |
+| MAKER | Area | Membuat pengajuan |
+| AREA_MANAGER | Area | Review dan approval pengajuan area |
+| FINANCE_REVIEWER | Project | Review aspek keuangan |
+| PROJECT_MANAGER | Project | Review dan approval project |
+| FINANCE_COORDINATOR | Project | Approval tahap awal |
+
+Model akses ini memungkinkan satu pengguna memiliki beberapa role dengan kombinasi scope yang berbeda.
 
 ## 1.5 Struktur Direktori
 
-```
+```text
 app/
 ├── Http/
-│   ├── Controllers/        # 6 controllers utama + 8 admin
-│   ├── Middleware/          # ValidateSession, CheckRole, SecurityHeaders
-│   └── Requests/            # FormRequest validasi (Spp, Admin, Profile)
-├── Models/                  # 13 Eloquent models
-├── Observers/               # SppObserver
-├── Providers/               # AppServiceProvider, ProfileViewServiceProvider
-├── Rules/                   # Custom validation rules (3)
-├── Services/                # 6 service classes
-├── Support/                 # RoleHelper
-└── ValueObjects/            # ValidationResult
-config/                      # 12 config files
+│   ├── Controllers/        # Application & admin controllers
+│   ├── Middleware/         # Session, role & security middleware
+│   └── Requests/           # FormRequest validation
+├── Models/                 # Eloquent models
+├── Observers/              # Model observers
+├── Providers/              # Application service providers
+├── Rules/                  # Custom validation rules
+├── Services/               # Business logic & application services
+├── Support/                # Helper classes
+└── ValueObjects/           # Domain value objects
+
+config/                     # Application configuration
+
 database/
-├── migrations/              # 23 migration files
-├── factories/
-└── seeders/                 # 4 seeder files
+├── migrations/             # Database schema migrations
+├── factories/              # Model factories
+└── seeders/                # Demo data seeders
+
 resources/
-├── views/                   # 33+ Blade templates
-├── css/                     # 10 CSS modules
-└── js/                      # 5 JS modules
-routes/                      # web.php, admin.php, web_profile.php
+├── views/                  # Blade templates
+├── css/                    # CSS modules
+└── js/                     # JavaScript modules
+
+routes/                     # Application route definitions
+
 public/
-├── build/                   # Vite production assets
-└── images/                  # Logo CD Bethesda
-```
+├── build/                  # Vite production assets
+└── images/                 # Application assets
 
 ## 1.6 Workflow Types
 
-| Tipe Flow | Project Codes |
-|-----------|---------------|
-| PROJECT_FLOW | 38, 40 |
-| PO_PK_TC_FLOW | 01, 03, 07 |
-| BATRA_KLINIK_DIKLAT_FLOW | 02, 04, 06 |
+Aplikasi mendukung beberapa tipe workflow untuk menyesuaikan kebutuhan proses approval.
 
-Detail lengkap ada di dokumen **04-workflow.md**.
+Tipe Flow	Deskripsi
+PROJECT_FLOW	Workflow approval untuk pengajuan berbasis project
+STANDARD_FLOW	Workflow approval umum
+SPECIALIZED_FLOW	Workflow dengan tahapan approval khusus
+
+Detail workflow dapat dilihat pada dokumen 04-workflow.md.

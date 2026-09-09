@@ -1,8 +1,8 @@
 {
     "name": "cdb-finance/cdb-finance",
     "type": "project",
-    "description": "CDB Finance - SPP Management System (B-SMART)",
-    "keywords": ["cdb", "finance", "spp", "b-smart"],
+    "description": "Finance Management System - Laravel Portfolio Project",
+    "keywords": ["finance", "financial-management", "spp", "laravel", "portfolio"],
     "license": "MIT",
     "require": {
         "php": "^8.2",

@@ -26,7 +26,7 @@
 </head>
 <body>
     <div class="title">FORM PENGAJUAN UANG MUKA</div>
-    <div class="subtitle">UPKM/CD BETHESDA YAKKUM</div>
+    <div class="subtitle">Finance Management Demo</div>
 
     <table class="form">
         <tr>
@@ -97,3 +97,4 @@
     </table>
 </body>
 </html>
+

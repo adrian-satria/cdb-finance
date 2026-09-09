@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Riwayat Pengajuan SPP | B-SMART')
+@section('title', 'Riwayat Pengajuan SPP | Finance Management Demo')
 
 @section('content')
 <div class="container-fluid py-4">
@@ -229,4 +229,5 @@
 </script>
 @endpush
 @endsection
+
 

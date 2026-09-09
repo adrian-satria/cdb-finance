@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Input LPJ | CDB Finance')
+@section('title', 'Input LPJ | Finance Management Demo')
 @section('content')
 <style>.btn-add-row:hover{background:rgba(26,115,232,0.04);border-color:#1a73e8;}</style>
 <div class="row">
@@ -67,3 +67,4 @@ function hitungTotal(){let t=0;document.querySelectorAll('.input-jumlah').forEac
 document.querySelector('form')?.addEventListener('submit',function(){document.querySelectorAll('.input-jumlah').forEach(i=>i.value=i.value.replace(/[^0-9]/g,''));});
 </script>
 @endsection
+

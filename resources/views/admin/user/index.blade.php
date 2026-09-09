@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Kelola User | B-SMART')
+@section('title', 'Kelola User | Finance Management Demo')
 
 @section('content')
 <div class="container-fluid py-4">

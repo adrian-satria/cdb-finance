@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Dashboard | B-SMART')
+@section('title', 'Dashboard | Finance Management Demo')
 @section('content')
 <div class="container-fluid py-4">
 
@@ -310,3 +310,4 @@
 </script>
 @endpush
 @endsection
+

@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Detail LPJ | CDB Finance')
+@section('title', 'Detail LPJ | Finance Management Demo')
 @section('content')
 <div class="row">
     <div class="col-lg-8">
@@ -57,3 +57,4 @@
     </div>
 </div>
 @endsection
+

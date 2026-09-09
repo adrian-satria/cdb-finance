@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Hash;
 
 class AdminUserSeeder extends Seeder
 {
-    const ADMIN_USERNAME = 'admin_keuangan';
+    const ADMIN_USERNAME = 'portfolio_admin';
 
     public function run(): void
     {
@@ -19,7 +19,7 @@ class AdminUserSeeder extends Seeder
 
         if (! $user) {
             $id_user = DB::table('users')->insertGetId([
-                'nama' => 'Adrian Admin',
+                'nama' => 'Portfolio Admin',
                 'username' => $username,
                 'password' => Hash::make($generatePassword),
             ]);

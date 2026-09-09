@@ -1,66 +1,177 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Finance Management System
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A portfolio project for a web-based financial management system built with Laravel.
 
-## About Laravel
+This application demonstrates how a structured financial workflow can be digitized, including fund requests, approval processes, budget validation, disbursement, accountability, and reporting.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Overview
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+The system is designed to simulate an organization-level financial management workflow with role-based access control and project/area scoping.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### Main Workflow
 
-## Learning Laravel
+Budget
+→ Fund Request
+→ Approval
+→ Disbursement
+→ Financial Realization
+→ Accountability (LPJ)
+→ Reimbursement
+→ Reporting
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## Key Features
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+- Fund request management
+- Multi-stage approval workflow
+- Budget ceiling validation
+- Role-based access control
+- Project and area-based data scoping
+- Multi-role user access
+- Audit trail
+- In-app notifications
+- Supporting document uploads
+- PDF document generation
+- Financial dashboard
+- Project and budget management
+- Database backup command
+- Automated validation and business rules
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## Technology Stack
 
-## Laravel Sponsors
+| Layer | Technology |
+|---|---|
+| Backend | PHP 8.2+, Laravel 11 |
+| Frontend | Blade, Bootstrap 5, Vite, Vanilla JavaScript |
+| Database | MySQL |
+| PDF | barryvdh/laravel-dompdf |
+| Authentication | Laravel Session Authentication |
+| Testing | PHPUnit |
+| Dependency Management | Composer |
+| Frontend Build | Vite / npm |
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## Architecture
 
-### Premium Partners
+The project follows Laravel's MVC architecture and separates application responsibilities through:
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+- Controllers
+- Models
+- Form Requests
+- Middleware
+- Services
+- Observers
+- Custom Validation Rules
+- Value Objects
+- Database Migrations
+- Seeders
+- Feature Tests
+- Unit Tests
 
-## Contributing
+Business logic is handled through application services and validation rules to keep controllers focused on request handling.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Security & Access Control
 
-## Code of Conduct
+The application implements several security-related mechanisms:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+- Session-based authentication
+- Password hashing
+- CSRF protection
+- Role-based authorization
+- Project/area data scoping
+- Form request validation
+- File upload validation
+- Audit logging
+- Session regeneration
+- Budget validation with database locking
 
-## Security Vulnerabilities
+Sensitive configuration values are excluded from version control through `.gitignore`.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Testing
 
-## License
+The project contains automated feature and unit tests covering areas such as:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+- Authentication
+- Fund request creation
+- Approval workflow
+- Budget validation
+- Project scoping
+- Reimbursement and LPJ flow
+- Audit logging
+- Notifications
+- File uploads
+- System settings
+- Business validation rules
+
+Run the test suite with:
+
+```bash
+php artisan test
+Local Installation
+Requirements
+PHP 8.2+
+Composer
+MySQL
+Node.js & npm
+Git
+Setup
+
+Clone the repository:
+
+git clone https://github.com/adrian-satria/cdb-finance.git
+cd cdb-finance
+
+Install PHP dependencies:
+
+composer install
+
+Install frontend dependencies:
+
+npm install
+
+Create the environment file:
+
+cp .env.example .env
+
+Generate the application key:
+
+php artisan key:generate
+
+Configure the database in .env, then run:
+
+php artisan migrate --seed
+
+Build frontend assets:
+
+npm run build
+
+Start the development server:
+
+php artisan serve
+Demo Data
+
+The repository includes sanitized demonstration data for portfolio purposes.
+
+No production database, credentials, personal information, or confidential organizational data are included in this repository.
+
+AI-Assisted Development
+
+AI-assisted software development tools were used during development to accelerate implementation, debugging, refactoring, testing, and documentation.
+
+The application itself should not be considered an AI-powered financial system. AI was used as a development assistance tool.
+
+Portfolio Note
+
+This project demonstrates practical experience in:
+
+IT application development
+Business process digitization
+Financial workflow automation
+Database-driven application development
+Role-based access control
+System validation
+IT operations and maintenance
+Troubleshooting and problem solving
+Author
+
+Adrian Satria Putra
+
+IT Support & Application Development

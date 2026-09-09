@@ -149,11 +149,11 @@
     <table class="header-container">
         <tr>
             <td class="header-left">
-                <div class="institution-name">UPKM/CD Bethesda YAKKUM</div>
+                <div class="institution-name">Finance Management Demo</div>
                 <div class="institution-address">
-                    Klitren Lor GK 3 No.374<br>
-                    Yogyakarta
-                </div>
+    Portfolio Demonstration System<br>
+    Yogyakarta, Indonesia
+</div>
             </td>
             <td class="header-right">
                 <table style="width: 100%; font-size: 11.5px;">

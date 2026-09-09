@@ -1,12 +1,12 @@
 @extends('layouts.app')
 
-@section('title', 'Audit Trail System Log | B-SMART')
+@section('title', 'Audit Trail System Log | Finance Management Demo')
 
 @section('content')
 <div class="container-fluid py-4">
     <div class="mb-4">
         <h4 class="fw-bold text-dark m-0"><i class="fa-solid fa-user-shield text-danger me-2"></i>Sistem Audit Trail</h4>
-        <p class="text-muted small m-0 mt-1">Rekam jejak aktivitas digital user, manipulasi data transaksi keuangan, dan log otorisasi sistem B-SMART.</p>
+        <p class="text-muted small m-0 mt-1">Rekam jejak aktivitas digital user, manipulasi data transaksi keuangan, dan log otorisasi sistem Finance Management Demo.</p>
     </div>
 
     <div class="card card-bsmart">

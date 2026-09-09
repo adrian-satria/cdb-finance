@@ -2,7 +2,7 @@
 
 ## 8.1 Login
 
-1. Buka `https://finance.cdbethesda.org/login`
+1. Buka `http://127.0.0.1:8000/login`
 2. Masukkan **Username** dan **Password**
 3. Klik **Login Sekarang**
 

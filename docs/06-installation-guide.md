@@ -1,42 +1,73 @@
-# 06 — Installation Guide (Local Development)
+06 — Installation Guide
 
-## 6.1 Prasyarat
+6.1 Requirements
 
-- PHP 8.2+
-- Composer 2.x
-- Node.js 18+ & npm
-- MySQL 8.0+ (atau MariaDB 10.6+)
-- Laragon (Windows) / Valet (macOS) / Docker
+Before installing the application, make sure the following software is available:
 
-## 6.2 Setup Laragon (Windows)
+PHP 8.2 or newer
 
-1. Download & install Laragon from https://laragon.org
-2. Pastikan PHP version ≥ 8.2.0 (Laragon → Menu → PHP → Version)
-3. Start Laragon (Apache + MySQL)
+Composer
 
-## 6.3 Clone & Install
+MySQL
 
-```bash
-# 1. Clone repositori
-git clone <repo-url> cdb-finance
+Node.js and npm
+
+Git
+
+A local PHP development environment such as Laragon, XAMPP, or equivalent
+
+Recommended PHP extensions:
+
+OpenSSL
+
+PDO
+
+PDO_MySQL
+
+Mbstring
+
+Tokenizer
+
+XML
+
+Ctype
+
+JSON
+
+Fileinfo
+
+6.2 Clone the Repository
+
+Clone the repository to your local development environment:
+
+git clone <repository-url>
 cd cdb-finance
 
-# 2. Install PHP dependencies
+6.3 Install PHP Dependencies
+
+Install Laravel dependencies using Composer:
+
 composer install
 
-# 3. Install frontend dependencies
-npm install
+6.4 Configure Environment
 
-# 4. Copy environment
+Create a local environment file from the example configuration:
+
 cp .env.example .env
-```
 
-## 6.4 Konfigurasi .env
+On Windows PowerShell, you can also use:
 
-Edit `.env`:
+Copy-Item .env.example .env
 
-```dotenv
-APP_NAME="CDB Finance - B-SMART"
+Generate the Laravel application key:
+
+php artisan key:generate
+
+Review the .env file and configure the local database connection.
+
+Example:
+
+APP_NAME="Finance Management Demo"
 APP_ENV=local
 APP_DEBUG=true
 APP_URL=http://localhost
@@ -44,94 +75,182 @@ APP_URL=http://localhost
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_DATABASE=db_cdb_finance
+DB_DATABASE=finance_management_demo
 DB_USERNAME=root
 DB_PASSWORD=
 
-SESSION_DRIVER=file
-SESSION_ENCRYPT=false
+The database name, username, and password above are examples for a local development environment. Do not commit a real .env file or production credentials to the repository.
 
-LOG_LEVEL=debug
-```
+6.5 Create the Database
 
-## 6.5 Generate Key & Database
+Create an empty MySQL database for local development.
 
-```bash
-# Generate application key
-php artisan key:generate
+Example database name:
 
-# Buat database via Laragon:
-#   Laragon → Database → Open → phpMyAdmin
-#   Atau via MySQL CLI:
-mysql -u root -e "CREATE DATABASE IF NOT EXISTS db_cdb_finance"
-```
+finance_management_demo
 
-## 6.6 Migrate & Seed
+The database name is only an example and can be changed according to your local environment.
 
-```bash
-# Run migration
+6.6 Run Database Migrations
+
+Run the Laravel migrations:
+
 php artisan migrate
 
-# Seed data awal
+For a fresh local installation with demo data:
+
+php artisan migrate:fresh --seed
+
+migrate:fresh deletes existing tables and data in the configured database. Only use it with a dedicated local/demo database.
+
+6.7 Seed Demo Data
+
+The repository includes seeders for demonstration purposes.
+
+Run:
+
 php artisan db:seed
 
-# Seed admin user (akan generate random password, catat!)
-php artisan db:seed --class=AdminUserSeeder
-```
+The demo environment provides sample:
 
-Default admin akan dibuat dengan:
-- Username: `admin_keuangan`
-- Password: **(random, lihat output terminal)**
+Projects
 
-## 6.7 Storage & Build
+Budget records
 
-```bash
-# Storage link (untuk file upload)
-php artisan storage:link
+User account data
 
-# Build frontend assets (dev)
+System configuration
+
+The seed data is intentionally generic and does not represent production financial records.
+
+6.8 Install Frontend Dependencies
+
+Install Node.js dependencies:
+
+npm install
+
+Start the Vite development server:
+
 npm run dev
 
-# Atau build untuk production
+For production assets:
+
 npm run build
-```
 
-## 6.8 Jalankan
+6.9 Start the Application
 
-```bash
-# Terminal 1: Laravel development server
+Start the Laravel development server:
+
 php artisan serve
 
-# Terminal 2 (opsional): Vite dev server
-npm run dev
-```
+The application will normally be available at:
 
-Buka `http://localhost:8000` di browser.
+http://127.0.0.1:8000
 
-## 6.9 Troubleshooting Local Setup
+If using Laragon or another local development environment, the application may also be accessible through the configured local virtual host.
 
-| Masalah | Solusi |
-|---------|--------|
-| `No application key` | `php artisan key:generate` |
-| `Target class ... does not exist` | `composer dump-autoload` |
-| Blank page / 500 | Cek `storage/logs/laravel.log` |
-| Vite asset 404 | `npm install && npm run dev` di terminal terpisah |
-| SQLSTATE[HY000] [2002] | Pastikan MySQL running di Laragon |
+6.10 Authentication
 
-## 6.10 Membuat User Baru (Testing)
+The application uses Laravel session-based authentication.
 
-Akses `http://localhost:8000/admin/user` setelah login sebagai ADMIN.
-Atau via tinker:
-```bash
-php artisan tinker
-> $user = \App\Models\User::create([
-    'nama' => 'Test User',
-    'username' => 'testuser',
-    'password' => bcrypt('Test1234'),
-  ]);
-> $user->akses()->create([
-    'role' => 'MAKER',
-    'jabatan' => 'Staff',
-    'kode_area' => 'PUSAT',
-  ]);
-```
+Demo user accounts should be created through the provided seeders or local development setup.
+
+For security reasons:
+
+Do not use production credentials in local seeders.
+
+Do not commit real passwords.
+
+Do not commit .env.
+
+Change any default/demo credentials before using the application outside a local environment.
+
+6.11 File Storage
+
+If the application uses public file storage, create the symbolic link:
+
+php artisan storage:link
+
+Uploaded files should be stored according to the application's configured filesystem.
+
+Do not place sensitive production documents inside the repository.
+
+6.12 Clear Application Cache
+
+If configuration or application changes are not immediately visible, clear the Laravel caches:
+
+php artisan optimize:clear
+
+You can also rebuild the application caches when required:
+
+php artisan optimize
+
+6.13 Run Tests
+
+Run the automated test suite:
+
+php artisan test
+
+For a more detailed test output:
+
+php artisan test --verbose
+
+The repository contains feature and unit tests covering selected application workflows, validation, authorization, audit functionality, and business rules.
+
+6.14 Development Workflow
+
+A typical local development workflow is:
+
+1. Clone repository
+       ↓
+2. composer install
+       ↓
+3. Configure .env
+       ↓
+4. php artisan key:generate
+       ↓
+5. Create local MySQL database
+       ↓
+6. php artisan migrate:fresh --seed
+       ↓
+7. npm install
+       ↓
+8. npm run dev
+       ↓
+9. php artisan serve
+       ↓
+10. Open application in browser
+
+6.15 Security Notes
+
+Before deploying an application outside a local development environment:
+
+Set APP_ENV=production.
+
+Set APP_DEBUG=false.
+
+Use a strong application key.
+
+Use secure database credentials.
+
+Configure HTTPS.
+
+Review file upload permissions.
+
+Review authentication and authorization settings.
+
+Do not expose .env.
+
+Do not commit database dumps or production backups.
+
+Do not commit real financial or personal data.
+
+Review application logs before sharing the project publicly.
+
+6.16 Portfolio / Demo Notes
+
+This repository is provided as a portfolio and demonstration project.
+
+The demo environment uses generic project names, budget categories, and sample data so that the repository can be shared without exposing organizational or production information.
+
+The application architecture and workflow are based on a real-world financial management use case, while the publicly shared demo data and configuration have been sanitized for portfolio purposes.

@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Input SPP | CDB Finance - B-SMART')
+@section('title', 'Input SPP | Finance Management Demo')
 
 @section('content')
 <style>

@@ -94,7 +94,7 @@ Route::middleware(['auth', 'validate.session'])->group(function () {
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.readAll');
 
     // =========================================================================
-    // MODUL GRUP ADMIN B-SMART (DIKUNCI KETAT DENGAN MIDDLEWARE role:ADMIN)
+    // MODUL ADMIN (DIKUNCI DENGAN MIDDLEWARE role:ADMIN)
     // =========================================================================
     Route::middleware(['role:ADMIN'])->prefix('admin')->name('admin.')->group(function () {
 
